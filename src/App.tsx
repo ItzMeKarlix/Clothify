@@ -6,9 +6,12 @@ import Products from "./pages/Products";
 import Admin from "./pages/Admin";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
+import { Toaster } from "react-hot-toast";
 
 const App: React.FC = () => {
   return (
+    <>
+    <Toaster position="top-right" reverseOrder={false} />
     <Router>
       <Layout>
         <Routes>
@@ -20,6 +23,7 @@ const App: React.FC = () => {
         </Routes>
       </Layout>
     </Router>
+    </>
   );
 };
 

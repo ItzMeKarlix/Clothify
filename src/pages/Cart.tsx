@@ -1,11 +1,22 @@
 import React, { useContext } from "react";
 import { CartContext } from "../context/CartContext";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 
 const Cart: React.FC = () => {
   const { cartItems, removeFromCart, clearCart } = useContext(CartContext);
 
   const total = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
+
+const handleRemove = (id: string) => {
+  removeFromCart(id);
+  toast.success("Item removed from cart");
+};
+
+const handleClear = () => {
+  clearCart();
+  toast.success("Cart cleared");
+};
 
   return (
     <div className="container mx-auto px-6 py-16">
@@ -39,7 +50,7 @@ const Cart: React.FC = () => {
                   <div className="flex items-center space-x-8">
                     <span className="text-black font-normal">${(item.price * item.qty).toFixed(2)}</span>
                     <button
-                      onClick={() => removeFromCart(item.id)}
+                      onClick={() => handleRemove(item.id)}
                       className="text-gray-400 hover:text-black font-light text-xs uppercase tracking-wide transition-colors"
                     >
                       Remove
@@ -61,7 +72,7 @@ const Cart: React.FC = () => {
                   </button>
                 </Link>
                 <button
-                  onClick={clearCart}
+                  onClick={handleClear}
                   className="bg-white hover:bg-gray-50 border border-gray-300 text-black px-6 py-3 text-sm uppercase tracking-wide font-light transition-colors"
                 >
                   Clear Cart
