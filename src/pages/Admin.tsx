@@ -76,7 +76,7 @@ const Admin: React.FC = () => {
                 placeholder="Enter admin token"
                 value={tokenInput}
                 onChange={(e) => setTokenInput(e.target.value)}
-                className="w-full border border-gray-300 px-4 py-3 focus:outline-none focus:border-black text-black text-sm"
+                className="w-full border border-gray-300 px-4 py-3 focus:outline-none focus:border-black text-black placeholder:text-gray-400 text-sm"
               />
             </div>
             <button 
@@ -199,7 +199,7 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ refreshProducts }) => {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required
-          className="w-full border border-gray-300 px-4 py-3 text-black focus:outline-none focus:border-black text-sm"
+          className="w-full border border-gray-300 px-4 py-3 text-black placeholder:text-gray-400 focus:outline-none focus:border-black text-sm"
         />
       </div>
 
@@ -209,7 +209,7 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ refreshProducts }) => {
           placeholder="Product description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="w-full border border-gray-300 px-4 py-3 text-black focus:outline-none focus:border-black text-sm resize-none"
+          className="w-full border border-gray-300 px-4 py-3 text-black placeholder:text-gray-400 focus:outline-none focus:border-black text-sm resize-none"
           rows={3}
         />
       </div>
@@ -223,7 +223,7 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ refreshProducts }) => {
           value={price}
           onChange={(e) => setPrice(e.target.value)}
           required
-          className="w-full border border-gray-300 px-4 text-black py-3 focus:outline-none focus:border-black text-sm"
+          className="w-full border border-gray-300 px-4 text-black placeholder:text-gray-400 py-3 focus:outline-none focus:border-black text-sm"
         />
       </div>
 
@@ -317,7 +317,7 @@ const EditProductForm: React.FC<EditProductFormProps> = ({ product, refreshProdu
             type="text" 
             value={title} 
             onChange={e => setTitle(e.target.value)} 
-            className="w-full border border-gray-300 px-4 py-3 focus:outline-none focus:border-black text-sm"
+            className="w-full border border-gray-300 px-4 py-3 text-black placeholder:text-gray-400 focus:outline-none focus:border-black text-sm"
           />
         </div>
         <div>
@@ -325,7 +325,7 @@ const EditProductForm: React.FC<EditProductFormProps> = ({ product, refreshProdu
           <textarea 
             value={description} 
             onChange={e => setDescription(e.target.value)} 
-            className="w-full border border-gray-300 px-4 py-3 focus:outline-none focus:border-black text-sm resize-none" 
+            className="w-full border border-gray-300 px-4 py-3 text-black placeholder:text-gray-400 focus:outline-none focus:border-black text-sm resize-none" 
             rows={3}
           />
         </div>
@@ -336,7 +336,7 @@ const EditProductForm: React.FC<EditProductFormProps> = ({ product, refreshProdu
             step="0.01" 
             value={price} 
             onChange={e => setPrice(e.target.value)} 
-            className="w-full border border-gray-300 px-4 py-3 focus:outline-none focus:border-black text-sm"
+            className="w-full border border-gray-300 px-4 py-3 text-black placeholder:text-gray-400 focus:outline-none focus:border-black text-sm"
           />
         </div>
         <div>
