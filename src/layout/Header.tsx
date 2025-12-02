@@ -1,12 +1,16 @@
 import React, { useContext, useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { CartContext } from "../context/CartContext";
+import { Search20Regular } from "@fluentui/react-icons";
 
 const Header: React.FC = () => {
   const { cartItems } = useContext(CartContext);
   const cartCount = cartItems.reduce((total, item) => total + item.qty, 0);
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [isVisible, setIsVisible] = useState(true);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -25,6 +29,15 @@ const Header: React.FC = () => {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery("");
+      setIsSearchOpen(false);
+    }
+  };
   
   return (
   <header className={`bg-white shadow-sm border-b border-gray-100 fixed top-0 left-0 right-0 z-40 transition-transform duration-300 ${
@@ -32,15 +45,68 @@ const Header: React.FC = () => {
   }`}>
     <div className="container mx-auto px-6 py-4">
       <div className="flex items-center justify-between">
-        <Link to="/" className="text-2xl font-light text-black tracking-wider">
-          CLOTHIFY
-        </Link>
+        <div className="flex items-center space-x-6">
+          <Link to="/" className="text-2xl font-light text-black tracking-wider">
+            CLOTHIFY
+          </Link>
+
+          {/* Search Icon with Expandable Input */}
+          <div 
+            className="relative group"
+            onMouseEnter={() => setIsSearchOpen(true)}
+            onMouseLeave={() => {
+              if (!searchQuery) setIsSearchOpen(false);
+            }}
+          >
+            <form onSubmit={handleSearch} className="flex items-center">
+              {/* Search Icon */}
+              <button
+                type="button"
+                className="text-gray-800 hover:text-black transition-colors"
+                aria-label="Search"
+              >
+                <Search20Regular />
+              </button>
+
+              {/* Expandable Search Input */}
+              <input
+                type="text"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={`ml-2 px-3 py-1 text-sm text-black bg-white border border-gray-300 rounded focus:outline-none focus:border-black transition-all duration-300 ${
+                  isSearchOpen ? 'w-64 opacity-100' : 'w-0 opacity-0 border-transparent'
+                }`}
+                onFocus={() => setIsSearchOpen(true)}
+              />
+            </form>
+          </div>
+        </div>
+
         <nav className="flex items-center space-x-8">
           <Link 
             to="/" 
             className="text-gray-800 hover:text-black transition-colors font-light text-sm uppercase tracking-wide"
           >
-            Shop
+            Home
+          </Link>
+          <Link 
+            to="/men" 
+            className="text-gray-800 hover:text-black transition-colors font-light text-sm uppercase tracking-wide"
+          >
+            Men
+          </Link>
+          <Link 
+            to="/women" 
+            className="text-gray-800 hover:text-black transition-colors font-light text-sm uppercase tracking-wide"
+          >
+            Women
+          </Link>
+          <Link 
+            to="/products" 
+            className="text-gray-800 hover:text-black transition-colors font-light text-sm uppercase tracking-wide"
+          >
+            Collection
           </Link>
           <Link 
             to="/cart" 

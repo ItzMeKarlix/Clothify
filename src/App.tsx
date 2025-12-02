@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Layout from "./layout/Layout";
 import Home from "./pages/Home";
 import Products from "./pages/Products";
+import Men from "./pages/Men";
+import Women from "./pages/Women";
 import Admin from "./pages/Admin";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
@@ -46,6 +48,8 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/men" element={<Men />} />
+          <Route path="/women" element={<Women />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/checkout" element={<Checkout />} />

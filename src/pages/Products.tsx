@@ -1,14 +1,19 @@
 import React, { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { productService } from "../api/api";
 import ProductCard from "../components/ProductCard";
 import type { Product } from "../types/database";
 import { CATEGORIES } from "../constants/categories";
 
 const Products: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  const searchQuery = searchParams.get("search") || "";
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -30,6 +35,18 @@ const Products: React.FC = () => {
     fetchProducts();
   }, [selectedCategory]);
 
+  useEffect(() => {
+    if (searchQuery) {
+      const filtered = products.filter(product =>
+        product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredProducts(filtered);
+    } else {
+      setFilteredProducts(products);
+    }
+  }, [searchQuery, products]);
+
   if (loading) return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <p className="text-gray-600 font-light text-sm">Loading products...</p>
@@ -42,11 +59,17 @@ const Products: React.FC = () => {
     </div>
   );
 
+  const displayProducts = searchQuery ? filteredProducts : products;
+
   return (
     <div className="container mx-auto px-6 py-16">
       <div className="mb-12">
-        <h1 className="text-4xl font-light text-black mb-2 tracking-wide">OUR COLLECTION</h1>
-        <p className="text-gray-500 font-light text-sm">Discover our latest arrivals</p>
+        <h1 className="text-4xl font-light text-black mb-2 tracking-wide">
+          {searchQuery ? `SEARCH RESULTS FOR "${searchQuery}"` : "OUR COLLECTION"}
+        </h1>
+        <p className="text-gray-500 font-light text-sm">
+          {searchQuery ? `${displayProducts.length} product(s) found` : "Discover our latest arrivals"}
+        </p>
       </div>
 
       {/* Category Filter */}
@@ -76,11 +99,13 @@ const Products: React.FC = () => {
         ))}
       </div>
 
-      {products.length === 0 ? (
-        <p className="text-center text-gray-600 font-light">No products available</p>
+      {displayProducts.length === 0 ? (
+        <p className="text-center text-gray-600 font-light">
+          {searchQuery ? "No products found matching your search" : "No products available"}
+        </p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-          {products.map((product) => <ProductCard key={product.id} product={product} />)}
+          {displayProducts.map((product) => <ProductCard key={product.id} product={product} />)}
         </div>
       )}
     </div>

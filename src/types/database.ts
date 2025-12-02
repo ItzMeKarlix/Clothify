@@ -23,7 +23,8 @@ export interface Product {
   description: string | null;
   price: number;
   image: string | null;
-  category: string;
+  category_id: string | null;
+  gender_id: string | null;
   created_at: string;
 }
 
@@ -33,7 +34,8 @@ export interface ProductInsert {
   description?: string | null;
   price: number;
   image?: string | null;
-  category: string;
+  category_id?: string | null;
+  gender_id?: string | null;
   created_at?: string;
 }
 
@@ -42,7 +44,8 @@ export interface ProductUpdate {
   description?: string | null;
   price?: number;
   image?: string | null;
-  category?: string;
+  category_id?: string | null;
+  gender_id?: string | null;
 }
 
 export interface Order {

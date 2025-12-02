@@ -12,6 +12,7 @@
     "dev:tunnel": "concurrently \"npm run dev\" \"npm run tunnel\""
   },
   "dependencies": {
+    "@fluentui/react-icons": "^2.0.315",
     "@supabase/supabase-js": "^2.39.0",
     "@tailwindcss/vite": "^4.1.17",
     "nanoid": "^5.0.4",

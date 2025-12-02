@@ -39,6 +39,29 @@ export const productService = {
     return data || [];
   },
 
+  // Get products by gender
+  async getByGender(genderSlug: string): Promise<Product[]> {
+    // First get the gender ID
+    const { data: genderData, error: genderError } = await supabase
+      .from('genders')
+      .select('id')
+      .eq('slug', genderSlug)
+      .single();
+    
+    if (genderError) throw genderError;
+    if (!genderData) throw new Error(`Gender '${genderSlug}' not found`);
+
+    // Then get products with that gender_id
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('gender_id', (genderData as any).id)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data || [];
+  },
+
   // Create product
   async create(productData: ProductInsert): Promise<Product> {
     const { data, error } = await supabase
