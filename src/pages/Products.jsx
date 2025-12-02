@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import API from "../api/api";
+import { productService } from "../api/api";
 import ProductCard from "../components/ProductCard";
 
 const Products = () => {
@@ -8,11 +8,11 @@ const Products = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Fetch products from backend
+    // Fetch products from Supabase
     const fetchProducts = async () => {
       try {
-        const res = await API.get("/products");
-        setProducts(res.data);
+        const data = await productService.getAll();
+        setProducts(data);
       } catch (err) {
         console.error(err);
         setError("Failed to fetch products");

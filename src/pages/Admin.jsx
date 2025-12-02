@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import API from "../api/api";
+import { productService, storageService } from "../api/api";
+import { nanoid } from "nanoid";
 
 const Admin = () => {
   const [authorized, setAuthorized] = useState(false);
@@ -21,8 +22,12 @@ const Admin = () => {
   }, [authorized]);
 
   const fetchProducts = async () => {
-    const res = await API.get("/products");
-    setProducts(res.data);
+    try {
+      const data = await productService.getAll();
+      setProducts(data);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    }
   };
 
   const handleLogin = (e) => {
@@ -41,12 +46,20 @@ const Admin = () => {
     setTokenInput("");
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id, imageUrl) => {
     if (!confirm("Are you sure you want to delete this product?")) return;
-    await API.delete(`/products/${id}`, {
-      headers: { "x-admin-token": import.meta.env.VITE_ADMIN_TOKEN },
-    });
-    fetchProducts();
+    try {
+      // Delete image from storage if exists
+      if (imageUrl) {
+        await storageService.deleteImage(imageUrl);
+      }
+      // Delete product from database
+      await productService.delete(id);
+      fetchProducts();
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      alert("Failed to delete product");
+    }
   };
 
   if (!authorized)
@@ -94,7 +107,7 @@ const Admin = () => {
             <div className="flex justify-between mt-2">
               <EditProductForm product={p} refreshProducts={fetchProducts} />
               <button
-                onClick={() => handleDelete(p.id)}
+                onClick={() => handleDelete(p.id, p.image)}
                 className="bg-red-600 text-white px-2 py-1 rounded"
               >
                 Delete
@@ -116,24 +129,40 @@ const AddProductForm = ({ refreshProducts }) => {
   const [price, setPrice] = useState("");
   const [image, setImage] = useState(null);
   const [message, setMessage] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("description", description);
-    formData.append("price", price);
-    if (image) formData.append("image", image);
-
+    setUploading(true);
+    
     try {
-      await API.post("/products", formData, {
-        headers: { "x-admin-token": import.meta.env.VITE_ADMIN_TOKEN },
+      let imageUrl = null;
+      
+      // Upload image to Supabase Storage if provided
+      if (image) {
+        imageUrl = await storageService.uploadImage(image);
+      }
+
+      // Create product in database
+      await productService.create({
+        id: nanoid(10),
+        title,
+        description,
+        price: parseFloat(price),
+        image: imageUrl,
       });
+
       setMessage("Product added!");
-      setTitle(""); setDescription(""); setPrice(""); setImage(null);
+      setTitle(""); 
+      setDescription(""); 
+      setPrice(""); 
+      setImage(null);
       refreshProducts();
-    } catch {
+    } catch (error) {
+      console.error("Error adding product:", error);
       setMessage("Error adding product");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -142,9 +171,11 @@ const AddProductForm = ({ refreshProducts }) => {
       {message && <p className="text-green-600">{message}</p>}
       <input type="text" placeholder="Title" value={title} onChange={e => setTitle(e.target.value)} required className="border p-2 rounded" />
       <textarea placeholder="Description" value={description} onChange={e => setDescription(e.target.value)} className="border p-2 rounded" />
-      <input type="number" placeholder="Price" value={price} onChange={e => setPrice(e.target.value)} required className="border p-2 rounded" />
-      <input type="file" onChange={e => setImage(e.target.files[0])} className="border p-2 rounded" />
-      <button type="submit" className="bg-blue-600 text-white p-2 rounded mt-2">Add Product</button>
+      <input type="number" step="0.01" placeholder="Price" value={price} onChange={e => setPrice(e.target.value)} required className="border p-2 rounded" />
+      <input type="file" accept="image/*" onChange={e => setImage(e.target.files[0])} className="border p-2 rounded" />
+      <button type="submit" disabled={uploading} className="bg-blue-600 text-white p-2 rounded mt-2 disabled:bg-gray-400">
+        {uploading ? "Uploading..." : "Add Product"}
+      </button>
     </form>
   );
 };
@@ -155,20 +186,37 @@ const EditProductForm = ({ product, refreshProducts }) => {
   const [description, setDescription] = useState(product.description);
   const [price, setPrice] = useState(product.price);
   const [image, setImage] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   const handleEdit = async (e) => {
     e.preventDefault();
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("description", description);
-    formData.append("price", price);
-    if (image) formData.append("image", image);
+    setUploading(true);
 
-    await API.put(`/products/${product.id}`, formData, {
-      headers: { "x-admin-token": import.meta.env.VITE_ADMIN_TOKEN },
-    });
-    setEditing(false);
-    refreshProducts();
+    try {
+      const updates = {
+        title,
+        description,
+        price: parseFloat(price),
+      };
+
+      // Upload new image if provided
+      if (image) {
+        // Delete old image if exists
+        if (product.image) {
+          await storageService.deleteImage(product.image);
+        }
+        updates.image = await storageService.uploadImage(image);
+      }
+
+      await productService.update(product.id, updates);
+      setEditing(false);
+      refreshProducts();
+    } catch (error) {
+      console.error("Error updating product:", error);
+      alert("Failed to update product");
+    } finally {
+      setUploading(false);
+    }
   };
 
   if (!editing) {
@@ -179,10 +227,12 @@ const EditProductForm = ({ product, refreshProducts }) => {
     <form onSubmit={handleEdit} className="flex flex-col gap-1">
       <input type="text" value={title} onChange={e => setTitle(e.target.value)} className="border p-1 rounded" />
       <textarea value={description} onChange={e => setDescription(e.target.value)} className="border p-1 rounded" />
-      <input type="number" value={price} onChange={e => setPrice(e.target.value)} className="border p-1 rounded" />
-      <input type="file" onChange={e => setImage(e.target.files[0])} className="border p-1 rounded" />
+      <input type="number" step="0.01" value={price} onChange={e => setPrice(e.target.value)} className="border p-1 rounded" />
+      <input type="file" accept="image/*" onChange={e => setImage(e.target.files[0])} className="border p-1 rounded" />
       <div className="flex gap-1 mt-1">
-        <button type="submit" className="bg-green-600 text-white px-2 py-1 rounded">Save</button>
+        <button type="submit" disabled={uploading} className="bg-green-600 text-white px-2 py-1 rounded disabled:bg-gray-400">
+          {uploading ? "..." : "Save"}
+        </button>
         <button type="button" onClick={() => setEditing(false)} className="bg-gray-600 text-white px-2 py-1 rounded">Cancel</button>
       </div>
     </form>

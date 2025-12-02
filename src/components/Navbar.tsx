@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
-const Navbar = () => (
+const Navbar: React.FC = () => (
   <nav className="bg-blue-600 p-4 text-white flex justify-between">
     <Link to="/" className="font-bold text-xl">Clothing Store</Link>
     <div className="space-x-4">
