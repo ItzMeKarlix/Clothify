@@ -1,13 +1,35 @@
-import React, { useContext } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { CartContext } from "../context/CartContext";
 
 const Header: React.FC = () => {
   const { cartItems } = useContext(CartContext);
   const cartCount = cartItems.reduce((total, item) => total + item.qty, 0);
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Show header when scrolling up, hide when scrolling down
+      if (currentScrollY < lastScrollY || currentScrollY < 50) {
+        setIsVisible(true);
+      } else if (currentScrollY > lastScrollY && currentScrollY > 50) {
+        setIsVisible(false);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
   
   return (
-  <header className="bg-white shadow-sm border-b border-gray-100">
+  <header className={`bg-white shadow-sm border-b border-gray-100 fixed top-0 left-0 right-0 z-40 transition-transform duration-300 ${
+    isVisible ? 'translate-y-0' : '-translate-y-full'
+  }`}>
     <div className="container mx-auto px-6 py-4">
       <div className="flex items-center justify-between">
         <Link to="/" className="text-2xl font-light text-black tracking-wider">
