@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
 import { productService } from "../api/api";
 import type { Product } from "../types/database";
+import HeroImg from "../assets/HeroImg.png";
 
 const Home: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -43,20 +44,14 @@ const Home: React.FC = () => {
               </Link>
             </div>
             
-            {/* Hero Image - Using first product or placeholder */}
+            {/* Hero Image */}
             <div className="relative lg:absolute lg:right-0 lg:top-0 lg:h-full lg:w-1/2">
               <div className="transform rotate-3 lg:rotate-6">
-                {products.length > 0 && products[0].image ? (
-                  <img 
-                    src={products[0].image} 
-                    alt="Featured product" 
-                    className="w-full h-[400px] lg:h-[600px] object-cover grayscale hover:grayscale-0 transition-all duration-500"
-                  />
-                ) : (
-                  <div className="w-full h-[400px] lg:h-[600px] bg-gray-200 flex items-center justify-center">
-                    <span className="text-gray-400 font-light">Featured Collection</span>
-                  </div>
-                )}
+                <img 
+                  src={HeroImg} 
+                  alt="Featured product" 
+                  className="w-full h-[400px] lg:h-[600px] object-cover grayscale hover:grayscale-0 transition-all duration-500"
+                />
               </div>
             </div>
           </div>
