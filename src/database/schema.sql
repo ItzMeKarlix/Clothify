@@ -63,12 +63,18 @@ CREATE POLICY "Enable delete for service role" ON products
   USING (auth.role() = 'service_role');
 
 -- Orders policies
--- Allow public to create orders
-CREATE POLICY "Enable insert for all users" ON orders
-  FOR INSERT
-  WITH CHECK (true);
+
+-- allow anon inserts
+CREATE POLICY "Allow anon inserts"
+ON orders
+FOR INSERT
+TO anon
+WITH CHECK (true);
+
+
 
 -- Allow service role to read all orders
 CREATE POLICY "Enable read for service role" ON orders
   FOR SELECT
   USING (auth.role() = 'service_role');
+

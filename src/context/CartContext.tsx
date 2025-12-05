@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, ReactNode } from "react";
 import { orderService } from "../api/api";
 import { nanoid } from "nanoid";
-import type { Product, Order, CartItem } from "../types/database";
+import type { Product, Order, CartItem, OrderInsert } from "../types/database";
 import toast from "react-hot-toast";
 
 interface CartContextType {
@@ -84,27 +84,52 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   };
 
   // submit order to Supabase
-  const submitOrder = async (customer_name: string, customer_email: string): Promise<Order> => {
-    const total = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
-    const orderData = {
-      id: nanoid(10),
-      customer_name,
-      customer_email,
-      items: cartItems.map(item => ({
-        id: item.id,
-        title: item.title,
-        price: item.price,
-        qty: item.qty,
-        image: item.image,
-        size: item.size
-      })),
-      total: parseFloat(total.toFixed(2))
-    };
-    
-    const order = await orderService.create(orderData);
-    clearCart(); // clear after successful submission
-    return order;
+const submitOrder = async (
+  customer_name: string,
+  customer_email: string
+): Promise<Order> => {
+  // Use cartItems from context state
+  if (!cartItems || cartItems.length === 0) {
+    throw new Error('Cart is empty');
+  }
+
+  // Calculate total
+  const total = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
+
+  // Build order payload
+  const orderData = {
+    id: nanoid(10),
+    customer_name,
+    customer_email,
+    items: cartItems.map(item => ({
+      id: item.id,
+      title: item.title,
+      price: item.price,
+      qty: item.qty,
+      image: item.image || null,
+      size: item.size
+    })), // must be array/object
+    total: parseFloat(total.toFixed(2))
   };
+
+  // Insert via orderService
+  const order = await orderService.create(orderData);
+
+  toast.success(`Checkout Successfully`, {
+      duration: 3000,
+      style: {
+        background: '#000',
+        color: '#fff',
+        fontSize: '14px',
+        fontWeight: '300',
+      },
+    });
+  
+  clearCart();
+  
+  return order;
+};
+
 
   return (
     <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, clearCart, incrementQty, decrementQty, submitOrder }}>

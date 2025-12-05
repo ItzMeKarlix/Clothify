@@ -1,18 +1,13 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import type { Database, Product, ProductInsert, ProductUpdate, Order, OrderInsert } from '../types/database';
+import { createClient, } from '@supabase/supabase-js';
+import type { Product, ProductInsert, ProductUpdate, Order, OrderInsert } from '../types/database';
+
 
 // Initialize Supabase client
+
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-export const supabase: SupabaseClient<Database> = createClient<Database>(
-  supabaseUrl,
-  supabaseAnonKey
-);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Helper functions for common operations
 export const productService = {
@@ -63,17 +58,21 @@ export const productService = {
   },
 
   // Create product
-  async create(productData: ProductInsert): Promise<Product> {
-    const { data, error } = await supabase
-      .from('products')
-      .insert([productData])
-      .select()
-      .single();
-    
-    if (error) throw error;
-    if (!data) throw new Error('Failed to create product');
-    return data;
-  },
+  async create(orderData: OrderInsert): Promise<Order> {
+  console.log('Inserting order:', JSON.stringify(orderData, null, 2));
+
+  const { data, error } = await supabase
+    .from('orders')
+    .insert([orderData])
+    .select()
+    .single();
+
+  console.log('Supabase insert response:', { data, error });
+
+  if (error) throw error;
+  if (!data) throw new Error('Failed to create order');
+  return data;
+},
 
   // Update product
   async update(id: string, updates: ProductUpdate): Promise<Product> {
@@ -100,17 +99,20 @@ export const productService = {
   }
 };
 
+// Order service
 export const orderService = {
-  // Create order
   async create(orderData: OrderInsert): Promise<Order> {
+
+    // Insert order
     const { data, error } = await supabase
       .from('orders')
       .insert([orderData])
       .select()
       .single();
-    
+
     if (error) throw error;
     if (!data) throw new Error('Failed to create order');
+
     return data;
   }
 };

@@ -7,22 +7,20 @@ const Checkout: React.FC = () => {
   const [email, setEmail] = useState<string>("");
   const [message, setMessage] = useState<string>("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (cartItems.length === 0) {
-      setMessage("Cart is empty!");
-      return;
-    }
-    try {
-      const res = await submitOrder(name, email);
-      setMessage(`Order submitted! Your order ID is ${res.id}`);
-      setName("");
-      setEmail("");
-    } catch (err) {
-      console.error(err);
-      setMessage("Error submitting order");
-    }
-  };
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  try {
+    const res = await submitOrder(name, email);
+    setMessage(`Order submitted! ID: ${res.id}`);
+    setName("");
+    setEmail("");
+  } catch (err: any) {
+    console.error(err);
+    setMessage(err.message || "Error submitting order");
+  }
+};
+
 
   const total = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
 
@@ -66,7 +64,7 @@ const Checkout: React.FC = () => {
                     value={name}
                     onChange={e => setName(e.target.value)}
                     required
-                    className="w-full border border-gray-300 px-4 py-3 focus:outline-none focus:border-black font-light text-sm"
+                    className="w-full border border-gray-300 px-4 text-black py-3 focus:outline-none focus:border-black font-light text-sm"
                   />
                 </div>
                 <div>
@@ -77,7 +75,7 @@ const Checkout: React.FC = () => {
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     required
-                    className="w-full border border-gray-300 px-4 py-3 focus:outline-none focus:border-black font-light text-sm"
+                    className="w-full border border-gray-300 px-4 text-black py-3 focus:outline-none focus:border-black font-light text-sm"
                   />
                 </div>
                 <button 
