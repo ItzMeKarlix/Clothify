@@ -6,8 +6,10 @@ import Products from "./pages/Products";
 import ProductView from "./pages/ProductView";
 import Men from "./pages/Men";
 import Women from "./pages/Women";
-import Login from "./pages/Login";
-import Admin from "./pages/Admin";
+import Login from "./pages/admin/Login";
+import ForgotPassword from "./pages/admin/ForgotPassword";
+import ResetPassword from "./pages/admin/ResetPassword";
+import Admin from "./pages/admin/Admin";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import { Toaster } from "react-hot-toast";
@@ -55,6 +57,8 @@ const App: React.FC = () => {
           <Route path="/men" element={<Men />} />
           <Route path="/women" element={<Women />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/auth/reset-password" element={<ResetPassword />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/checkout" element={<Checkout />} />

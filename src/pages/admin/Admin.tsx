@@ -1,8 +1,8 @@
 import React, { useState, useEffect, FormEvent, ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { productService, storageService, categoryService, authService } from "../api/api";
+import { productService, storageService, categoryService, authService } from "../../api/api";
 import { nanoid } from "nanoid";
-import type { Product, Category } from "../types/database";
+import type { Product, Category } from "../../types/database";
 import toast from "react-hot-toast";
 
 
