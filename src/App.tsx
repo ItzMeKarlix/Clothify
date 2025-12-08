@@ -6,6 +6,7 @@ import Products from "./pages/Products";
 import ProductView from "./pages/ProductView";
 import Men from "./pages/Men";
 import Women from "./pages/Women";
+import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
@@ -53,6 +54,7 @@ const App: React.FC = () => {
           <Route path="/product/:id" element={<ProductView />} />
           <Route path="/men" element={<Men />} />
           <Route path="/women" element={<Women />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/checkout" element={<Checkout />} />
