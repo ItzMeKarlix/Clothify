@@ -1,25 +1,39 @@
 import React, { useState, useEffect, FormEvent, ChangeEvent } from "react";
-import { productService, storageService, categoryService } from "../api/api";
+import { useNavigate } from "react-router-dom";
+import { productService, storageService, categoryService, authService } from "../../api/api";
 import { nanoid } from "nanoid";
-import type { Product, Category } from "../types/database";
+import type { Product, Category } from "../../types/database";
 import toast from "react-hot-toast";
 
 
 
 const Admin: React.FC = () => {
+  const navigate = useNavigate();
   const [authorized, setAuthorized] = useState<boolean>(false);
-  const [tokenInput, setTokenInput] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [message, setMessage] = useState<string>("");
 
-  // Login check
+  // Check auth session
   useEffect(() => {
-    const savedToken = localStorage.getItem("adminToken");
-    if (savedToken === import.meta.env.VITE_ADMIN_TOKEN) {
-      setAuthorized(true);
-    }
-  }, []);
+    const checkAuth = async () => {
+      try {
+        const session = await authService.getCurrentSession();
+        if (session) {
+          setAuthorized(true);
+        } else {
+          navigate("/login");
+        }
+      } catch (err) {
+        console.error("Auth error:", err);
+        navigate("/login");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, [navigate]);
 
   // Fetch products
   useEffect(() => {
@@ -47,20 +61,15 @@ const Admin: React.FC = () => {
     }
   };
 
-  const handleLogin = (e: FormEvent) => {
-    e.preventDefault();
-    if (tokenInput === import.meta.env.VITE_ADMIN_TOKEN) {
-      localStorage.setItem("adminToken", tokenInput);
-      setAuthorized(true);
-    } else {
-      setMessage("Invalid token");
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+      navigate("/login");
+      toast.success("Logged out successfully");
+    } catch (err) {
+      console.error("Logout error:", err);
+      toast.error("Failed to logout");
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("adminToken");
-    setAuthorized(false);
-    setTokenInput("");
   };
 
   const handleDelete = async (id: string, imageUrl: string | null) => {
@@ -75,33 +84,21 @@ const Admin: React.FC = () => {
     }
   };
 
-  if (!authorized)
+  if (loading) {
     return (
-      <div className="container mx-auto px-6 py-16">
-        <div className="max-w-md mx-auto">
-          <h1 className="text-4xl text-black mb-8 text-center tracking-wide">ADMIN LOGIN</h1>
-          {message && <p className="mb-4 text-red-500 text-center text-sm">{message}</p>}
-          <form onSubmit={handleLogin} className="bg-white border border-gray-200 p-8 space-y-6">
-            <div>
-              <label className="block text-xs text-black mb-2 uppercase tracking-wide">Admin Token</label>
-              <input
-                type="password"
-                placeholder="Enter admin token"
-                value={tokenInput}
-                onChange={(e) => setTokenInput(e.target.value)}
-                className="w-full border border-gray-300 px-4 py-3 focus:outline-none focus:border-black text-black placeholder:text-gray-400 text-sm"
-              />
-            </div>
-            <button 
-              type="submit" 
-              className="w-full bg-black hover:bg-gray-800 text-white px-6 py-3 text-sm uppercase tracking-wide transition-colors"
-            >
-              Login
-            </button>
-          </form>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-600 font-light text-sm">Loading...</p>
       </div>
     );
+  }
+
+  if (!authorized) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-600 font-light text-sm">Redirecting to login...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-6 py-16">

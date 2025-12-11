@@ -214,4 +214,56 @@ export const storageService = {
   }
 };
 
+// Auth service
+export const authService = {
+  async login(email: string, password: string) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async logout() {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+  },
+
+  async getCurrentSession() {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    return data.session;
+  },
+
+  async getCurrentUser() {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) throw error;
+    return data.user;
+  },
+
+  onAuthStateChange(callback: (event: string, session: any) => void) {
+    return supabase.auth.onAuthStateChange(callback);
+  },
+
+  async resetPasswordForEmail(email: string) {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async updatePassword(password: string) {
+    const { data, error } = await supabase.auth.updateUser({
+      password,
+    });
+    
+    if (error) throw error;
+    return data;
+  }
+};
+
 export default supabase;

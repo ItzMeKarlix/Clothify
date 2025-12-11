@@ -1,0 +1,7 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "env": {
+    "RECAPTCHA_SECRET_KEY": "@recaptcha_secret_key"
+  }
+}
