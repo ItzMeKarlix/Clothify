@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Layout from "./layout/Layout";
 import Home from "./pages/Home";
-import Products from "./pages/Products";
-import ProductView from "./pages/ProductView";
-import Men from "./pages/Men";
-import Women from "./pages/Women";
+import Products from "./pages/products/Products";
+import ProductView from "./pages/products/ProductView";
+import Men from "./pages/products/Men";
+import Women from "./pages/products/Women";
+import Accessories from "./pages/products/Accessories";
 import Login from "./pages/admin/Login";
 import ForgotPassword from "./pages/admin/ForgotPassword";
 import ResetPassword from "./pages/admin/ResetPassword";
@@ -56,6 +57,7 @@ const App: React.FC = () => {
           <Route path="/product/:id" element={<ProductView />} />
           <Route path="/men" element={<Men />} />
           <Route path="/women" element={<Women />} />
+          <Route path="/accessories" element={<Accessories />} />
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/auth/reset-password" element={<ResetPassword />} />

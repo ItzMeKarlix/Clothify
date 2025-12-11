@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { productService } from "../api/api";
-import { CartContext } from "../context/CartContext";
-import ProductDetailSkeleton from "../components/ProductDetailSkeleton";
-import type { Product } from "../types/database";
+import { productService } from "../../api/api";
+import { CartContext } from "../../context/CartContext";
+import ProductDetailSkeleton from "../../components/ProductDetailSkeleton";
+import type { Product } from "../../types/database";
 
 const ProductView: React.FC = () => {
   const { id } = useParams<{ id: string }>();

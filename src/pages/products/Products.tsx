@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { productService } from "../api/api";
-import ProductCard from "../components/ProductCard";
-import ProductGridSkeleton from "../components/ProductGridSkeleton";
-import type { Product } from "../types/database";
-import { CATEGORIES } from "../constants/categories";
+import { productService } from "../../api/api";
+import ProductCard from "../../components/ProductCard";
+import ProductGridSkeleton from "../../components/ProductGridSkeleton";
+import type { Product } from "../../types/database";
+import { CATEGORIES } from "../../constants/categories";
 
 const Products: React.FC = () => {
   const [searchParams] = useSearchParams();

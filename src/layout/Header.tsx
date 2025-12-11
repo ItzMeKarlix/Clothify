@@ -73,16 +73,16 @@ const Header: React.FC = () => {
             Women
           </Link>
           <Link 
-            to="/products" 
-            className="text-gray-800 hover:text-black transition-colors font-light text-sm uppercase tracking-wide"
-          >
-            Collection
-          </Link>
-          <Link 
             to="/accessories" 
             className="text-gray-800 hover:text-black transition-colors font-light text-sm uppercase tracking-wide"
           >
             Accessories
+          </Link>
+          <Link 
+            to="/products" 
+            className="text-gray-800 hover:text-black transition-colors font-light text-sm uppercase tracking-wide"
+          >
+            Collection
           </Link>
         </nav>
 

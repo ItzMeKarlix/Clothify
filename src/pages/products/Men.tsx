@@ -1,5 +1,5 @@
 import React from "react";
-import CategoryPage from "../layout/Collection";
+import CategoryPage from "../../layout/Collection";
 
 const Men: React.FC = () => {
   return (
