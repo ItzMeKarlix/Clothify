@@ -13,6 +13,7 @@ import ResetPassword from "./pages/admin/ResetPassword";
 import Admin from "./pages/admin/Admin";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
+import NotFound from "./pages/NotFound";
 import { Toaster } from "react-hot-toast";
 
 
@@ -64,6 +65,7 @@ const App: React.FC = () => {
           <Route path="/cart" element={<Cart />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Layout>
     </Router>
