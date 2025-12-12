@@ -104,6 +104,17 @@ const Login: React.FC = () => {
           body: JSON.stringify({ token }),
         });
 
+        // Check for rate limiting (429 status)
+        if (verifyResponse.status === 429) {
+          const rateLimitData = await verifyResponse.json();
+          const retryAfter = rateLimitData.retryAfter || 60;
+          const minutes = Math.ceil(retryAfter / 60);
+          setError(`Too many login attempts. Please try again in ${minutes} minute${minutes > 1 ? 's' : ''}.`);
+          window.turnstile.reset();
+          setLoading(false);
+          return;
+        }
+
         if (!verifyResponse.ok) {
           console.warn("Turnstile verification endpoint not available, proceeding with login");
         } else {
