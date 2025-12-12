@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { authService } from "../../api/api";
 import toast from "react-hot-toast";
 import adminImg from "../../assets/admin-img.png";
+import { sanitizeString, isValidEmail, isValidLength } from "../../utils/validation";
 
 declare global {
   interface Window {
@@ -72,11 +73,39 @@ const Login: React.FC = () => {
     setError(null);
 
     try {
+      // Input validation
       if (!email || !password) {
         setError("Please enter both email and password");
         setLoading(false);
         return;
       }
+
+      // Validate email format
+      const emailValidation = isValidEmail(email);
+      if (!emailValidation.valid) {
+        setError(emailValidation.message || "Please enter a valid email address");
+        setLoading(false);
+        return;
+      }
+
+      // Validate input lengths to prevent buffer overflow
+      const emailLengthValidation = isValidLength(email, 255);
+      if (!emailLengthValidation.valid) {
+        setError(emailLengthValidation.message || "Email address is too long");
+        setLoading(false);
+        return;
+      }
+
+      const passwordLengthValidation = isValidLength(password, 255);
+      if (!passwordLengthValidation.valid) {
+        setError(passwordLengthValidation.message || "Password is too long");
+        setLoading(false);
+        return;
+      }
+
+      // Sanitize inputs to prevent XSS
+      const sanitizedEmail = sanitizeString(email);
+      const sanitizedPassword = sanitizeString(password);
 
       // Get Turnstile token
       if (!window.turnstile) {
@@ -131,8 +160,8 @@ const Login: React.FC = () => {
         console.warn("Could not verify CAPTCHA, proceeding with login:", err);
       }
 
-      // Proceed with login
-      await authService.login(email, password);
+      // Proceed with login using sanitized credentials
+      await authService.login(sanitizedEmail, sanitizedPassword);
       toast.success("Login successful!");
       navigate("/admin");
     } catch (err: any) {

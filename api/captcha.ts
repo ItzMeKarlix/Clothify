@@ -1,4 +1,5 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
+import { validateToken, isValidMethod } from "./validation";
 
 interface TurnstileVerifyResponse {
   success: boolean;
@@ -92,6 +93,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ success: false, message: "No token provided" });
   }
 
+  // Validate token format
+  let validatedToken: string;
+  try {
+    validatedToken = validateToken(token);
+  } catch (err: any) {
+    console.warn(`⚠️ Invalid token format from IP: ${clientIP}`);
+    return res.status(400).json({ success: false, message: err.message || "Invalid token format" });
+  }
+
   try {
     const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
       method: "POST",
@@ -100,7 +110,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
       body: JSON.stringify({
         secret: process.env.TURNSTILE_SECRET_KEY || "",
-        response: token,
+        response: validatedToken,
       }),
     });
 
