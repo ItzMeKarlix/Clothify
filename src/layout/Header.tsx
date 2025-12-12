@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CartContext } from "../context/CartContext";
-import { Search20Regular, ShoppingBag20Regular } from "@fluentui/react-icons";
+import { Search20Regular, ShoppingBag20Regular, BoxRegular } from "@fluentui/react-icons";
 import logo from "../assets/logo.svg";
 
 const Header: React.FC = () => {
@@ -56,42 +56,52 @@ const Header: React.FC = () => {
         <nav className="flex items-center space-x-8 flex-1 justify-center">
           <Link 
             to="/" 
-            className="text-gray-800 hover:text-black transition-colors font-light text-sm uppercase tracking-wide"
+            className="text-gray-800 hover:text-blue-600 transition-colors font-light text-sm uppercase tracking-wide"
           >
             Home
           </Link>
           <Link 
             to="/men" 
-            className="text-gray-800 hover:text-black transition-colors font-light text-sm uppercase tracking-wide"
+            className="text-gray-800 hover:text-blue-600 transition-colors font-light text-sm uppercase tracking-wide"
           >
             Men
           </Link>
           <Link 
             to="/women" 
-            className="text-gray-800 hover:text-black transition-colors font-light text-sm uppercase tracking-wide"
+            className="text-gray-800 hover:text-blue-600 transition-colors font-light text-sm uppercase tracking-wide"
           >
             Women
           </Link>
           <Link 
             to="/accessories" 
-            className="text-gray-800 hover:text-black transition-colors font-light text-sm uppercase tracking-wide"
+            className="text-gray-800 hover:text-blue-600 transition-colors font-light text-sm uppercase tracking-wide"
           >
             Accessories
           </Link>
           <Link 
             to="/products" 
-            className="text-gray-800 hover:text-black transition-colors font-light text-sm uppercase tracking-wide"
+            className="text-gray-800 hover:text-blue-600 transition-colors font-light text-sm uppercase tracking-wide"
           >
             Collection
           </Link>
         </nav>
 
-        {/* Right Side: Cart and Search */}
+        {/* Right Side: Cart, Tracking and Search */}
         <div className="flex items-center space-x-6 shrink-0">
+
+          {/* Tracking/Parcels Icon */}
+          <Link 
+            to="/tracking" 
+            className="text-gray-800 hover:text-blue-600 transition-colors relative shrink-0"
+            aria-label="Track Parcels"
+          >
+            <BoxRegular />
+          </Link>
+
           {/* Cart Icon */}
           <Link 
             to="/cart" 
-            className="text-gray-800 hover:text-black transition-colors relative shrink-0"
+            className="text-gray-800 hover:text-blue-600 transition-colors relative shrink-0"
             aria-label="Cart"
           >
             <ShoppingBag20Regular />
@@ -101,6 +111,7 @@ const Header: React.FC = () => {
               </span>
             )}
           </Link>
+
 
           {/* Search Icon with Expandable Input - Absolute positioned to avoid pushing layout */}
           <div 
@@ -114,7 +125,7 @@ const Header: React.FC = () => {
               {/* Search Icon */}
               <button
                 type="button"
-                className="text-gray-800 hover:text-black transition-colors absolute left-0"
+                className="text-gray-800 hover:text-blue-600 transition-colors absolute left-0"
                 aria-label="Search"
               >
                 <Search20Regular />
