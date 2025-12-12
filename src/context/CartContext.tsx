@@ -11,7 +11,21 @@ interface CartContextType {
   clearCart: () => void;
   incrementQty: (id: string) => void;
   decrementQty: (id: string) => void;
-  submitOrder: (customer_name: string, customer_email: string) => Promise<Order>;
+  submitOrder: (
+    customer_name: string,
+    customer_email: string,
+    details?: {
+      address?: string;
+      city?: string;
+      state?: string;
+      zip?: string;
+      country?: string;
+      paymentMethod?: string;
+      cardNumber?: string;
+      expiry?: string;
+      cvc?: string;
+    }
+  ) => Promise<Order>;
 }
 
 export const CartContext = createContext<CartContextType>({
@@ -86,18 +100,27 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   // submit order to Supabase
 const submitOrder = async (
   customer_name: string,
-  customer_email: string
+  customer_email: string,
+  details?: {
+    address?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+    country?: string;
+    paymentMethod?: string;
+    cardNumber?: string;
+    expiry?: string;
+    cvc?: string;
+  }
 ): Promise<Order> => {
-  // Use cartItems from context state
   if (!cartItems || cartItems.length === 0) {
     throw new Error('Cart is empty');
   }
 
-  // Calculate total
   const total = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
 
-  // Build order payload
-  const orderData = {
+  // Build order payload including new checkout fields
+  const orderData: OrderInsert = {
     id: nanoid(10),
     customer_name,
     customer_email,
@@ -108,28 +131,34 @@ const submitOrder = async (
       qty: item.qty,
       image: item.image || null,
       size: item.size
-    })), // must be array/object
-    total: parseFloat(total.toFixed(2))
+    })),
+    total: parseFloat(total.toFixed(2)),
+    address: details?.address,
+    city: details?.city,
+    state: details?.state,
+    zip: details?.zip,
+    country: details?.country,
+    payment_method: details?.paymentMethod,
+    card_last4: details?.cardNumber?.slice(-4), // only last 4 digits
+    card_expiry: details?.expiry,
   };
 
-  // Insert via orderService
   const order = await orderService.create(orderData);
 
   toast.success(`Checkout Successfully`, {
-      duration: 3000,
-      style: {
-        background: '#000',
-        color: '#fff',
-        fontSize: '14px',
-        fontWeight: '300',
-      },
-    });
-  
+    duration: 3000,
+    style: {
+      background: '#000',
+      color: '#fff',
+      fontSize: '14px',
+      fontWeight: '300',
+    },
+  });
+
   clearCart();
-  
+
   return order;
 };
-
 
   return (
     <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, clearCart, incrementQty, decrementQty, submitOrder }}>

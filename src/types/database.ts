@@ -79,12 +79,18 @@ export interface Order {
 }
 
 export interface OrderInsert {
-  id: string;
   customer_name: string;
   customer_email: string;
-  items: OrderItem[];
+  items: CartItem[];
   total: number;
-  created_at?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  country?: string;
+  payment_method?: string;
+  card_last4?: string;
+  card_expiry?: string;
 }
 
 export interface OrderUpdate {
