@@ -35,13 +35,61 @@ const app = express();
 const PORT = parseInt(process.env.API_PORT || '3001', 10);
 const TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY;
 
+// CORS configuration for security
+const allowedOrigins = [
+  'http://localhost:5173',        // Vite dev server
+  'http://localhost:3000',        // Alternative frontend dev
+  'http://localhost:8080',        // Alternative dev port
+  'http://127.0.0.1:5173',
+  process.env.FRONTEND_URL,       // Production frontend URL
+  // ngrok URLs for testing
+  ...(process.env.NGROK_URL ? [process.env.NGROK_URL] : []),
+].filter(Boolean); // Remove undefined entries
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl requests)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS policy violation: Origin ${origin} not allowed`), false);
+    }
+  },
+  credentials: true,                          // Allow cookies/auth headers
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
+  maxAge: 86400,                             // 24 hours
+};
+
 // Middleware
-app.use(cors());
-app.use(express.json());
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '10kb' }));   // Limit payload size
+app.use(express.urlencoded({ limit: '10kb' }));
+
+// Security headers middleware
+app.use((req, res, next) => {
+  // Prevent clickjacking
+  res.setHeader('X-Frame-Options', 'DENY');
+  
+  // Prevent MIME type sniffing
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  
+  // Enable XSS protection
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  
+  // Content Security Policy (basic)
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'");
+  
+  // Referrer policy
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  next();
+});
 
 // Request logging
 app.use((req, res, next) => {
-  console.log(`📨 ${req.method} ${req.path}`);
+  console.log(`📨 ${req.method} ${req.path} - Origin: ${req.get('origin') || 'none'}`);
   next();
 });
 
