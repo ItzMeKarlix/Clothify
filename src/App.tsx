@@ -19,7 +19,7 @@ import { Toaster } from "react-hot-toast";
 
 
 const App: React.FC = () => {
-  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [isHeaderVisible, setIsHeaderVisible] = useState( true);
   const [lastScrollY, setLastScrollY] = useState(0);
 
   useEffect(() => {

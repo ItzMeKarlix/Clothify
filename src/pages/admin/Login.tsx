@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../../api/api";
 import toast from "react-hot-toast";
@@ -6,42 +6,46 @@ import adminImg from "../../assets/admin-img.png";
 
 declare global {
   interface Window {
-    grecaptcha: any;
+    turnstile: any;
   }
 }
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const turnstileRef = useRef<any>(null);
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [showCaptcha, setShowCaptcha] = useState<boolean>(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
-  // Load reCAPTCHA script and hide badge
+  // Load Cloudflare Turnstile script
   useEffect(() => {
     const script = document.createElement("script");
-    const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI";
-    script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`;
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
     script.async = true;
     script.defer = true;
     document.body.appendChild(script);
 
-    // Hide reCAPTCHA badge
-    const style = document.createElement("style");
-    style.innerHTML = `
-      .grecaptcha-badge {
-        visibility: hidden;
-      }
-    `;
-    document.head.appendChild(style);
-
     return () => {
       document.body.removeChild(script);
-      document.head.removeChild(style);
     };
+  }, []);
+
+  // Initialize Turnstile widget after script loads
+  useEffect(() => {
+    const checkTurnstile = setInterval(() => {
+      if (window.turnstile) {
+        clearInterval(checkTurnstile);
+        const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA";
+        window.turnstile.render("#turnstile-container", {
+          sitekey: siteKey,
+          theme: "light",
+        });
+      }
+    }, 100);
+
+    return () => clearInterval(checkTurnstile);
   }, []);
 
   // Check if already logged in
@@ -72,58 +76,35 @@ const Login: React.FC = () => {
         return;
       }
 
-      // Generate reCAPTCHA token
-      if (window.grecaptcha) {
-        const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI";
-        const token = await window.grecaptcha.execute(siteKey, {
-          action: "login",
-        });
-        setCaptchaToken(token);
-        setShowCaptcha(true);
+      // Get Turnstile token
+      if (!window.turnstile) {
+        setError("CAPTCHA not loaded. Please refresh the page.");
         setLoading(false);
         return;
       }
 
-      // If reCAPTCHA not loaded, proceed without it
-      await authService.login(email, password);
-      toast.success("Login successful!");
-      navigate("/admin");
-    } catch (err: any) {
-      console.error("Login error:", err);
-      const errorMessage = err.message || "Failed to login";
-      setError(errorMessage);
-      toast.error(errorMessage);
-      setLoading(false);
-    }
-  };
-
-  const handleCaptchaVerify = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      if (!captchaToken) {
-        setError("CAPTCHA verification failed. Please try again.");
+      const token = window.turnstile.getResponse();
+      if (!token) {
+        setError("Please complete the CAPTCHA verification");
         setLoading(false);
         return;
       }
 
       // Verify CAPTCHA token with backend
-      const apiUrl = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/captcha` : "/api/captcha";
-      const response = await fetch(apiUrl, {
+      const apiUrl = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/turnstile` : "/api/turnstile";
+      const verifyResponse = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ token: captchaToken }),
+        body: JSON.stringify({ token }),
       });
 
-      const data = await response.json();
+      const verifyData = await verifyResponse.json();
 
-      if (!data.success) {
+      if (!verifyData.success) {
         setError("CAPTCHA verification failed. Please try again.");
-        setShowCaptcha(false);
-        setCaptchaToken(null);
+        window.turnstile.reset();
         setLoading(false);
         return;
       }
@@ -133,18 +114,14 @@ const Login: React.FC = () => {
       toast.success("Login successful!");
       navigate("/admin");
     } catch (err: any) {
-      console.error("CAPTCHA verification error:", err);
-      setError("CAPTCHA verification failed. Please try again.");
-      setShowCaptcha(false);
-      setCaptchaToken(null);
+      console.error("Login error:", err);
+      const errorMessage = err.message || "Failed to login";
+      setError(errorMessage);
+      toast.error(errorMessage);
+      window.turnstile?.reset();
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleCaptchaCancel = () => {
-    setShowCaptcha(false);
-    setCaptchaToken(null);
   };
 
   return (
@@ -170,49 +147,6 @@ const Login: React.FC = () => {
           {/* CAPTCHA Modal */}
           {showCaptcha && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-              <div className="bg-white rounded-lg p-8 max-w-sm w-full shadow-xl">
-                <h3 className="text-xl font-bold text-black mb-4">Verify You're Human</h3>
-                <p className="text-gray-600 text-sm mb-6">
-                  This site is protected by reCAPTCHA and the Google{" "}
-                  <a
-                    href="https://policies.google.com/privacy"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 hover:underline"
-                  >
-                    Privacy Policy
-                  </a>{" "}
-                  and{" "}
-                  <a
-                    href="https://policies.google.com/terms"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 hover:underline"
-                  >
-                    Terms of Service
-                  </a>{" "}
-                  apply.
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleCaptchaCancel}
-                    disabled={loading}
-                    className="flex-1 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 text-black px-4 py-2 text-sm font-medium transition-colors rounded disabled:cursor-not-allowed"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleCaptchaVerify}
-                    disabled={loading}
-                    className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white px-4 py-2 text-sm font-medium transition-colors rounded disabled:cursor-not-allowed"
-                  >
-                    {loading ? "Verifying..." : "Verify"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
@@ -224,7 +158,7 @@ const Login: React.FC = () => {
                 placeholder="example@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={loading || showCaptcha}
+                disabled={loading}
                 className="w-full border border-gray-300 px-4 py-3 text-black placeholder:text-gray-400 focus:outline-none focus:border-black text-sm disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors rounded"
               />
             </div>
@@ -239,13 +173,13 @@ const Login: React.FC = () => {
                   placeholder="write your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading || showCaptcha}
+                  disabled={loading}
                   className="w-full border border-gray-300 px-4 py-3 pr-10 text-black placeholder:text-gray-400 focus:outline-none focus:border-black text-sm disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors rounded"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  disabled={loading || showCaptcha}
+                  disabled={loading}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-black disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
                 >
                   {showPassword ? (
@@ -267,9 +201,12 @@ const Login: React.FC = () => {
               </div>
             </div>
 
+            {/* Turnstile Widget */}
+            <div id="turnstile-container" className="flex justify-center"></div>
+
             <button
               type="submit"
-              disabled={loading || showCaptcha}
+              disabled={loading}
               className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed text-white px-6 py-3 text-sm font-medium transition-colors rounded"
             >
               {loading ? "Signing in..." : "Sign in"}

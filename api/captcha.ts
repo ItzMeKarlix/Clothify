@@ -1,12 +1,10 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 
-interface CaptchaVerifyResponse {
+interface TurnstileVerifyResponse {
   success: boolean;
-  score: number;
-  action: string;
-  challenge_ts: string;
-  hostname: string;
   error_codes?: string[];
+  challenge_ts?: string;
+  hostname?: string;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -37,30 +35,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const response = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+    const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
       method: "POST",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Type": "application/json",
       },
-      body: new URLSearchParams({
-        secret: process.env.RECAPTCHA_SECRET_KEY || "",
+      body: JSON.stringify({
+        secret: process.env.TURNSTILE_SECRET_KEY || "",
         response: token,
-      }).toString(),
+      }),
     });
 
-    const data = (await response.json()) as CaptchaVerifyResponse;
-    const { success, score, action } = data;
+    const data = (await response.json()) as TurnstileVerifyResponse;
+    const { success, error_codes } = data;
 
-    // reCAPTCHA v3 returns a score between 0 and 1
-    // 0 = likely bot, 1 = likely human
-    // We'll accept scores above 0.5
-    if (success && score >= 0.5 && action === "login") {
-      return res.json({ success: true, score });
+    if (success) {
+      return res.json({ success: true, message: "CAPTCHA verification successful" });
     } else {
       return res.json({
         success: false,
-        score,
         message: "CAPTCHA verification failed",
+        error_codes,
       });
     }
   } catch (error) {
