@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./layout/Layout";
 import SupportLayout from "./layout/SupportLayout";
+import AdminLayout from "./layout/AdminLayout";
 import Home from "./pages/Home";
 import Products from "./pages/products/Products";
 import ProductView from "./pages/products/ProductView";
@@ -12,6 +13,10 @@ import Login from "./pages/admin/Login";
 import ForgotPassword from "./pages/admin/ForgotPassword";
 import ResetPassword from "./pages/admin/ResetPassword";
 import Admin from "./pages/admin/Admin";
+import Dashboard from "./pages/admin/Dashboard";
+import Inventory from "./pages/admin/Inventory";
+import Customers from "./pages/admin/Customers";
+import Payments from "./pages/admin/Payments";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Tracking from "./pages/Tracking";
@@ -84,12 +89,22 @@ const App: React.FC = () => {
             <Route path="privacy" element={<PrivacyPolicy />} />
             <Route path="warranty" element={<Warranty />} />
           </Route>
-
-          <Route path="/admin" element={<Admin />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Layout>
+
+      {/* Admin Routes */}
+      <Routes>
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="products" element={<Admin />} />
+          <Route path="inventory" element={<Inventory />} />
+          <Route path="customers" element={<Customers />} />
+          <Route path="payments" element={<Payments />} />
+        </Route>
+      </Routes>
     </Router>
     </>
   );
