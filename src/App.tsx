@@ -14,6 +14,7 @@ import Admin from "./pages/admin/Admin";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Tracking from "./pages/Tracking";
+import Support from "./pages/Support";
 import NotFound from "./pages/NotFound";
 import { Toaster } from "react-hot-toast";
 
@@ -65,6 +66,7 @@ const App: React.FC = () => {
           <Route path="/auth/reset-password" element={<ResetPassword />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/tracking" element={<Tracking />} />
+          <Route path="/support" element={<Support />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="*" element={<NotFound />} />
