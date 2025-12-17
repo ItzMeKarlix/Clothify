@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
-import { Bell, Home, ShoppingCart, Users, Package, CreditCard, Search, User as UserIcon } from 'lucide-react';
+import { Bell, Home, ShoppingCart, Users, Package, CreditCard, Search, User as UserIcon, LogOut, PanelRight } from 'lucide-react';
+import Logo from '../assets/logo.svg';
 
 const adminLinks = [
   { name: 'Dashboard', path: '/admin/dashboard', icon: Home },
@@ -13,16 +14,18 @@ const adminLinks = [
 
 const AdminLayout: React.FC = () => {
   const location = useLocation();
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <aside className="w-64 bg-white border-r border-gray-200">
-        <div className="p-6">
-          <Link to="/admin/dashboard" className="text-2xl font-bold text-black">
-            Clothify Admin
+      <aside className={cn("bg-white border-r border-gray-200 flex flex-col transition-all duration-300", isCollapsed ? "w-20" : "w-64")}>
+        <div className="p-6 flex items-center justify-center">
+          <Link to="/admin/dashboard" className="flex items-center">
+            <img src={Logo} alt="Clothify" className="w-8 h-8" />
+            {!isCollapsed && <span className="text-2xl font-bold text-black ml-2">Clothify</span>}
           </Link>
         </div>
-        <nav className="mt-6">
+        <nav className="mt-6 flex-1">
           <ul>
             {adminLinks.map((link) => (
               <li key={link.name}>
@@ -30,16 +33,39 @@ const AdminLayout: React.FC = () => {
                   to={link.path}
                   className={cn(
                     'flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100 hover:text-black',
-                    location.pathname.startsWith(link.path) && 'bg-gray-100 text-black'
+                    location.pathname.startsWith(link.path) && 'bg-gray-100 text-black',
+                    isCollapsed && 'justify-center'
                   )}
                 >
-                  <link.icon className="w-5 h-5 mr-3" />
-                  {link.name}
+                  <link.icon className={cn("w-5 h-5", !isCollapsed && "mr-3")} />
+                  {!isCollapsed && link.name}
                 </Link>
               </li>
             ))}
           </ul>
         </nav>
+        <div className="p-6">
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className={cn(
+              'flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100 hover:text-black w-full',
+              isCollapsed && 'justify-center'
+            )}
+          >
+            <PanelRight className="w-5 h-5" />
+            {!isCollapsed && <span className="ml-3">Collapse</span>}
+          </button>
+          <Link
+            to="/"
+            className={cn(
+              'flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100 hover:text-black w-full',
+              isCollapsed && 'justify-center'
+            )}
+          >
+            <LogOut className="w-5 h-5" />
+            {!isCollapsed && <span className="ml-3">Logout</span>}
+          </Link>
+        </div>
       </aside>
       <div className="flex-1 flex flex-col">
         <header className="bg-white border-b border-gray-200 p-6 flex justify-between items-center">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./layout/Layout";
 import SupportLayout from "./layout/SupportLayout";
@@ -32,54 +32,24 @@ import { Toaster } from "react-hot-toast";
 
 
 const App: React.FC = () => {
-  const [isHeaderVisible, setIsHeaderVisible] = useState( true);
-  const [lastScrollY, setLastScrollY] = useState(0);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      
-      if (currentScrollY < lastScrollY || currentScrollY < 50) {
-        setIsHeaderVisible(true);
-      } else if (currentScrollY > lastScrollY && currentScrollY > 50) {
-        setIsHeaderVisible(false);
-      }
-      
-      setLastScrollY(currentScrollY);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
-
   return (
     <>
-    <Toaster 
-      position="top-right" 
-      reverseOrder={false}
-      toastOptions={{
-        style: {
-          marginTop: isHeaderVisible ? '70px' : '16px',
-          transition: 'margin-top 0.3s ease',
-        },
-      }}
-    />
-    <Router>
-      <Layout>
+      <Toaster position="top-right" reverseOrder={false} />
+      <Router>
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/products" element={<Products />} />
-          <Route path="/product/:id" element={<ProductView />} />
-          <Route path="/men" element={<Men />} />
-          <Route path="/women" element={<Women />} />
-          <Route path="/accessories" element={<Accessories />} />
+          {/* Public Routes */}
+          <Route path="/" element={<Layout><Home /></Layout>} />
+          <Route path="/products" element={<Layout><Products /></Layout>} />
+          <Route path="/product/:id" element={<Layout><ProductView /></Layout>} />
+          <Route path="/men" element={<Layout><Men /></Layout>} />
+          <Route path="/women" element={<Layout><Women /></Layout>} />
+          <Route path="/accessories" element={<Layout><Accessories /></Layout>} />
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/auth/reset-password" element={<ResetPassword />} />
-          <Route path="/cart" element={<Cart />} />
-          <Route path="/tracking" element={<Tracking />} />
-          
-          <Route path="/support" element={<SupportLayout />}>
+          <Route path="/cart" element={<Layout><Cart /></Layout>} />
+          <Route path="/tracking" element={<Layout><Tracking /></Layout>} />
+          <Route path="/support" element={<Layout><SupportLayout /></Layout>}>
             <Route index element={<Navigate to="/support/contact" replace />} />
             <Route path="contact" element={<ContactUs />} />
             <Route path="faq" element={<FAQ />} />
@@ -89,23 +59,20 @@ const App: React.FC = () => {
             <Route path="privacy" element={<PrivacyPolicy />} />
             <Route path="warranty" element={<Warranty />} />
           </Route>
-          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/checkout" element={<Layout><Checkout /></Layout>} />
           <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Layout>
 
-      {/* Admin Routes */}
-      <Routes>
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<Navigate to="/admin/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="products" element={<Admin />} />
-          <Route path="inventory" element={<Inventory />} />
-          <Route path="customers" element={<Customers />} />
-          <Route path="payments" element={<Payments />} />
-        </Route>
-      </Routes>
-    </Router>
+          {/* Admin Routes */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="products" element={<Admin />} />
+            <Route path="inventory" element={<Inventory />} />
+            <Route path="customers" element={<Customers />} />
+            <Route path="payments" element={<Payments />} />
+          </Route>
+        </Routes>
+      </Router>
     </>
   );
 };
