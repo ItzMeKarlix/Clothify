@@ -12,6 +12,7 @@ dist
 dist-ssr
 .env
 *.local
+gemini.md
 
 
 # Editor directories and files
