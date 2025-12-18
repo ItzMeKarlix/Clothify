@@ -9,6 +9,9 @@ import ProductView from "./pages/products/ProductView";
 import Men from "./pages/products/Men";
 import Women from "./pages/products/Women";
 import Accessories from "./pages/products/Accessories";
+import Login from "./pages/login/Login";
+import ForgotPassword from "./pages/login/ForgotPassword";
+import ResetPassword from "./pages/login/ResetPassword";
 import Admin from "./pages/admin/Admin";
 import Dashboard from "./pages/admin/Dashboard";
 import Inventory from "./pages/admin/Inventory";
@@ -42,6 +45,9 @@ const App: React.FC = () => {
           <Route path="/men" element={<Layout><Men /></Layout>} />
           <Route path="/women" element={<Layout><Women /></Layout>} />
           <Route path="/accessories" element={<Layout><Accessories /></Layout>} />
+          <Route path="/login" element={<Layout><Login /></Layout>} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/employee-dashboard" element={<EmployeeDashboard/>}></Route>
           <Route path="/cart" element={<Layout><Cart /></Layout>} />
           <Route path="/tracking" element={<Layout><Tracking /></Layout>} />
