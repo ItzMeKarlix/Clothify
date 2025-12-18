@@ -9,7 +9,9 @@ import fetch from 'node-fetch';
 import process from 'process';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const envPath = path.join(__dirname, '..', '.env');
+const envPath = path.join(__dirname, '.env');
+
+// Load environment variables
 dotenv.config({ path: envPath });
 
 const app = express();
@@ -95,7 +97,22 @@ app.use((err, req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => console.log(`🚀 Server running at http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log('\n');
+  console.log('🚀 Clothify Backend Server');
+  console.log('━'.repeat(60));
+  console.log(`✅ Server running at: http://localhost:${PORT}`);
+  console.log(`📍 Turnstile verification endpoint: http://localhost:${PORT}/api/turnstile`);
+  console.log(`⏱️  Started at: ${new Date().toLocaleTimeString()}`);
+  console.log('━'.repeat(60));
+  console.log('\n💡 Available endpoints:');
+  console.log('  GET  /health              - Server health check');
+  console.log('  POST /api/turnstile       - CAPTCHA verification');
+  console.log('\n🌐 With ngrok:');
+  console.log('  Terminal: ngrok http 3001');
+  console.log('  Update VITE_API_URL to your ngrok URL');
+  console.log('\n⚠️  Development mode - Not for production use\n');
+});
 
 // Graceful shutdown
 process.on('SIGTERM', () => { console.log('Shutting down'); process.exit(0); });

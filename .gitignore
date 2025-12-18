@@ -12,7 +12,8 @@ dist
 dist-ssr
 .env
 *.local
-
+gemini.md
+reference
 
 # Editor directories and files
 .vscode/*
