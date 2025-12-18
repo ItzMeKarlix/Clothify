@@ -13,13 +13,16 @@
   },
   "dependencies": {
     "@fluentui/react-icons": "^2.0.315",
+    "@radix-ui/react-avatar": "^1.1.11",
+    "@radix-ui/react-collapsible": "^1.1.12",
+    "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-scroll-area": "^1.2.10",
+    "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
-    "@sendgrid/mail": "^8.1.6",
     "@shadcn/ui": "^0.0.4",
     "@supabase/supabase-js": "^2.39.0",
-    "@tailwindcss/vite": "^4.1.17",
+    "@tailwindcss/vite": "^4.1.18",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "express": "^5.2.1",
@@ -31,8 +34,7 @@
     "react-router-dom": "^7.9.6",
     "supabase": "^2.67.1",
     "tailwind-merge": "^3.4.0",
-    "tailwindcss": "^4.1.17",
-    "twilio": "^5.11.1"
+    "tailwindcss": "^4.1.17"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

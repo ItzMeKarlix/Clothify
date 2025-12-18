@@ -1,35 +1,19 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CartContext } from "../context/CartContext";
 import { Search20Regular, ShoppingBag20Regular, BoxRegular } from "@fluentui/react-icons";
 import logo from "../assets/logo.svg";
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  isVisible: boolean;
+}
+
+const Header: React.FC<HeaderProps> = ({ isVisible }) => {
   const { cartItems } = useContext(CartContext);
   const cartCount = cartItems.reduce((total, item) => total + item.qty, 0);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [isVisible, setIsVisible] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [lastScrollY, setLastScrollY] = useState(0);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      
-      // Show header when scrolling up, hide when scrolling down
-      if (currentScrollY < lastScrollY || currentScrollY < 50) {
-        setIsVisible(true);
-      } else if (currentScrollY > lastScrollY && currentScrollY > 50) {
-        setIsVisible(false);
-      }
-      
-      setLastScrollY(currentScrollY);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
