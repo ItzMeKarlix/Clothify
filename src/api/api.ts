@@ -9,6 +9,31 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+export const adminService = {
+  async inviteEmployee(email: string) {
+    const { data, error } = await supabase.auth.admin.inviteUserByEmail(email);
+    if (error) throw error;
+    return data;
+  }
+};
+
+export const userService = {
+  async getUserRole(userId: string): Promise<string | null> {
+    const { data, error } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .maybeSingle(); // safer than single()
+
+    if (error) {
+      console.error("Error fetching user role:", error);
+      return null;
+    }
+
+    return data?.role || null;
+  },
+};
+
 // Helper functions for common operations
 export const productService = {
   // Get all products
@@ -82,16 +107,16 @@ export const productService = {
   },
 
   // Update product
-  async update(id: string, updates: ProductUpdate): Promise<Product> {
+    async update(id: string, updates: ProductUpdate): Promise<Product> {
     const { data, error } = await supabase
       .from('products')
       .update(updates)
       .eq('id', id)
       .select()
-      .single();
-    
+      .maybeSingle(); // 👈 important
+
     if (error) throw error;
-    if (!data) throw new Error('Failed to update product');
+    if (!data) throw new Error('Product not updated (check RLS)');
     return data;
   },
 
@@ -214,55 +239,71 @@ export const storageService = {
   }
 };
 
+
 // Auth service
 export const authService = {
+  // Login with email and password
   async login(email: string, password: string) {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    
     if (error) throw error;
     return data;
   },
 
+  // Logout
   async logout() {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   },
 
+  // Get current session
   async getCurrentSession() {
     const { data, error } = await supabase.auth.getSession();
     if (error) throw error;
     return data.session;
   },
 
+  // Get current user
   async getCurrentUser() {
     const { data, error } = await supabase.auth.getUser();
     if (error) throw error;
     return data.user;
   },
 
+  // Listen to auth state changes
   onAuthStateChange(callback: (event: string, session: any) => void) {
     return supabase.auth.onAuthStateChange(callback);
   },
 
+  // Send password reset email
   async resetPasswordForEmail(email: string) {
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/reset-password`,
     });
-    
     if (error) throw error;
     return data;
   },
 
+  // Update password for logged-in user
   async updatePassword(password: string) {
-    const { data, error } = await supabase.auth.updateUser({
-      password,
-    });
-    
+    const { data, error } = await supabase.auth.updateUser({ password });
     if (error) throw error;
     return data;
+  },
+
+  // Resend email confirmation for a user
+  async resendConfirmationEmail(email: string) {
+    // Supabase triggers confirmation email on signUp
+    const tempPassword = Math.random().toString(36).slice(-8);
+    const { data, error } = await supabase.auth.signUp(
+      { email, password: tempPassword },
+      { redirectTo: window.location.origin + "/login" }
+    );
+
+    if (error) throw error;
+    return data; // confirmation email sent automatically
   }
 };
 

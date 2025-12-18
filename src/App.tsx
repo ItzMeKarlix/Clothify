@@ -7,14 +7,15 @@ import ProductView from "./pages/products/ProductView";
 import Men from "./pages/products/Men";
 import Women from "./pages/products/Women";
 import Accessories from "./pages/products/Accessories";
-import Login from "./pages/admin/Login";
-import ForgotPassword from "./pages/admin/ForgotPassword";
-import ResetPassword from "./pages/admin/ResetPassword";
+import Login from "./pages/login/Login";
+import ForgotPassword from "./pages/login/ForgotPassword";
+import ResetPassword from "./pages/login/ResetPassword";
 import Admin from "./pages/admin/Admin";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Tracking from "./pages/Tracking";
 import NotFound from "./pages/NotFound";
+import EmployeeDashboard from "./pages/employees/EmployeeDashboard";
 import { Toaster } from "react-hot-toast";
 
 
@@ -61,6 +62,7 @@ const App: React.FC = () => {
           <Route path="/women" element={<Women />} />
           <Route path="/accessories" element={<Accessories />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/employee-dashboard" element={<EmployeeDashboard/>}></Route>
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/auth/reset-password" element={<ResetPassword />} />
           <Route path="/cart" element={<Cart />} />

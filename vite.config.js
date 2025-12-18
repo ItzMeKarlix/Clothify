@@ -29,5 +29,11 @@ export default defineConfig({
       '.ngrok.io',
       '.ngrok-free.app',
     ],
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
   },
 })
