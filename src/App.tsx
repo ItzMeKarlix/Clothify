@@ -38,14 +38,11 @@ import EmployeeDashboard from "./pages/employees/EmployeeDashboard";
 import EmployeeInventory from "./pages/employees/EmployeeInventory";
 import EmployeeProducts from "./pages/employees/EmployeeProducts";
 import EmployeeCustomers from "./pages/employees/EmployeeCustomers";
-import { Toaster } from "react-hot-toast";
 
 
 const App: React.FC = () => {
   return (
-    <>
-      <Toaster position="top-right" reverseOrder={false} />
-      <Router>
+    <Router>
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Layout><Home /></Layout>} />
@@ -161,7 +158,6 @@ const App: React.FC = () => {
           </Route>
         </Routes>
       </Router>
-    </>
   );
 };
 

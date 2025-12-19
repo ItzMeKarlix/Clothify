@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import { CartContext } from "../context/CartContext";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 const Checkout: React.FC = () => {
-  const { cartItems, submitOrder } = useContext(CartContext);
+  const { cartItems, submitOrder, setCartItems, isBuyNowMode, buyNowItems } = useContext(CartContext);
+  
+  // Use buy now items if in buy now mode, otherwise use normal cart
+  const displayItems = isBuyNowMode ? buyNowItems : cartItems;
+  
   const [name, setName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [address, setAddress] = useState<string>("");
@@ -20,8 +24,31 @@ const Checkout: React.FC = () => {
   const [expiry, setExpiry] = useState<string>("");
   const [cvc, setCvc] = useState<string>("");
   const [message, setMessage] = useState<string>("");
+  const [orderSubmitted, setOrderSubmitted] = useState<boolean>(false);
+  
+  const total = displayItems.reduce((acc, item) => acc + item.price * item.qty, 0);
 
-  const total = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
+  useEffect(() => {
+    // Check if this is a "Buy Now" checkout (temp cart exists)
+    const tempCart = localStorage.getItem("temp_cart");
+    if (tempCart) {
+      // This is a Buy Now checkout - temp cart will be restored if order is not completed
+      return;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      // Component unmounting - restore original cart if order wasn't submitted and we're in buy now mode
+      if (!orderSubmitted && isBuyNowMode) {
+        const tempCart = localStorage.getItem("temp_cart");
+        if (tempCart) {
+          setCartItems(JSON.parse(tempCart));
+          localStorage.removeItem("temp_cart");
+        }
+      }
+    };
+  }, [orderSubmitted, setCartItems, isBuyNowMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +64,7 @@ const Checkout: React.FC = () => {
         expiry,
         cvc,
       });
+      setOrderSubmitted(true);
       setMessage(`Order submitted! ID: ${res.id}`);
       setName(""); setEmail(""); setAddress(""); setCity(""); setState(""); setZip(""); setCountry("");
       setCardNumber(""); setExpiry(""); setCvc("");
@@ -51,7 +79,7 @@ const Checkout: React.FC = () => {
       <div className="max-w-5xl mx-auto">
         <h1 className="text-4xl font-light text-black mb-8 tracking-wide">Checkout</h1>
 
-        {cartItems.length === 0 ? (
+        {displayItems.length === 0 ? (
           <div className="text-center py-12 bg-white border border-gray-100">
             <p className="text-gray-500 font-light">Your cart is empty.</p>
           </div>
@@ -64,7 +92,7 @@ const Checkout: React.FC = () => {
               </CardHeader>
               <ScrollArea className="flex-1 overflow-y-auto mt-3">
                 <CardContent className="space-y-4">
-                  {cartItems.map((item) => (
+                  {displayItems.map((item) => (
                     <div key={item.id} className="flex justify-between items-center text-sm">
                       <div className="flex items-center gap-4">
                         {item.image && (

@@ -1,10 +1,17 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect } from "react";
 import { CartContext } from "../context/CartContext";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
 const Cart: React.FC = () => {
-  const { cartItems, removeFromCart, clearCart, incrementQty, decrementQty } = useContext(CartContext);
+  const { cartItems, removeFromCart, clearCart, incrementQty, decrementQty, setIsBuyNowMode } = useContext(CartContext);
+
+  // Reset buy now mode when cart page loads
+  useEffect(() => {
+    if (setIsBuyNowMode) {
+      setIsBuyNowMode(false);
+    }
+  }, [setIsBuyNowMode]);
 
   const total = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
 

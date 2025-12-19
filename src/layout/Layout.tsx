@@ -2,6 +2,7 @@ import React, { ReactNode, useState, useEffect } from "react";
 import Header from "./Header";
 import Footer from "./Footer";
 import { ScrollArea } from "../components/ui/scroll-area";
+import { Toaster } from "react-hot-toast";
 
 interface LayoutProps {
   children: ReactNode;
@@ -32,7 +33,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     <div className="min-h-screen flex flex-col bg-white">
       <Header isVisible={isHeaderVisible} />
       <ScrollArea className="grow pt-16 w-full">
-        <main className="px-4">
+        <main className="px-4 relative">
+          <Toaster 
+            position="top-right" 
+            reverseOrder={false}
+            containerStyle={{
+              top: isHeaderVisible ? '80px' : '16px',
+              right: '16px',
+              position: 'fixed',
+              zIndex: 50
+            }}
+          />
           {children}
         </main>
         <Footer />

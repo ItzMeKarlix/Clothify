@@ -11,6 +11,11 @@ interface CartContextType {
   clearCart: () => void;
   incrementQty: (id: string) => void;
   decrementQty: (id: string) => void;
+  setCartItems: (items: CartItem[]) => void;
+  buyNow: (product: Product, size?: string) => void;
+  isBuyNowMode: boolean;
+  buyNowItems: CartItem[];
+  setIsBuyNowMode: (mode: boolean) => void;
   submitOrder: (
     customer_name: string,
     customer_email: string,
@@ -35,6 +40,11 @@ export const CartContext = createContext<CartContextType>({
   clearCart: () => {},
   incrementQty: () => {},
   decrementQty: () => {},
+  setCartItems: () => {},
+  buyNow: () => {},
+  isBuyNowMode: false,
+  buyNowItems: [],
+  setIsBuyNowMode: () => {},
   submitOrder: async () => ({} as Order),
 });
 
@@ -49,6 +59,17 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [isBuyNowMode, setIsBuyNowMode] = useState<boolean>(false);
+  const [buyNowItems, setBuyNowItems] = useState<CartItem[]>([]);
+
+  // Reset buy now mode on page refresh
+  useEffect(() => {
+    setIsBuyNowMode(false);
+    setBuyNowItems([]);
+    // Clean up any temp cart data
+    localStorage.removeItem("temp_cart");
+  }, []);
+
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(cartItems));
   }, [cartItems]);
@@ -61,7 +82,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
           item.id === product.id && item.size === size ? { ...item, qty: item.qty + 1 } : item
         );
       }
-      return [...prev, { ...product, qty: 1, size }];
+      return [...prev, { ...product, qty: 1, ...(size && { size }) }];
     });
     // Show toast notification
     toast.success(`${product.title}${size ? ` (${size})` : ''} added to cart`, {
@@ -95,6 +116,30 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         item.id === id ? { ...item, qty: Math.max(1, item.qty - 1) } : item
       )
     );
+  };
+
+  // Computed cart items based on mode
+  const effectiveCartItems = isBuyNowMode ? buyNowItems : cartItems;
+
+  const setCartItemsDirectly = (items: CartItem[]) => {
+    setCartItems(items);
+  };
+
+  const setIsBuyNowModeDirectly = (mode: boolean) => {
+    setIsBuyNowMode(mode);
+    if (!mode) {
+      setBuyNowItems([]);
+    }
+  };
+
+  const buyNow = (product: Product, size?: string) => {
+    // Store current cart for restoration
+    localStorage.setItem("temp_cart", JSON.stringify(cartItems));
+    
+    // Set buy now mode with the single item
+    const buyNowItem = { ...product, qty: 1, ...(size && { size }) };
+    setBuyNowItems([buyNowItem]);
+    setIsBuyNowMode(true);
   };
 
   // submit order to Supabase
@@ -155,13 +200,38 @@ const submitOrder = async (
     },
   });
 
-  clearCart();
+  // Check if this was a "Buy Now" checkout
+  const tempCart = localStorage.getItem("temp_cart");
+  if (tempCart && isBuyNowMode) {
+    // Restore the original cart
+    const originalCart = JSON.parse(tempCart);
+    setCartItems(originalCart);
+    setIsBuyNowMode(false);
+    setBuyNowItems([]);
+    localStorage.removeItem("temp_cart");
+  } else {
+    // Normal checkout - clear the cart
+    clearCart();
+  }
 
   return order;
 };
 
   return (
-    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, clearCart, incrementQty, decrementQty, submitOrder }}>
+    <CartContext.Provider value={{ 
+      cartItems, 
+      addToCart, 
+      removeFromCart, 
+      clearCart, 
+      incrementQty, 
+      decrementQty, 
+      setCartItems: setCartItemsDirectly, 
+      buyNow, 
+      isBuyNowMode,
+      buyNowItems,
+      setIsBuyNowMode: setIsBuyNowModeDirectly,
+      submitOrder 
+    }}>
       {children}
     </CartContext.Provider>
   );

@@ -1,31 +1,43 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { productService } from "../../api/api";
+import { productService, categoryService } from "../../api/api";
 import { CartContext } from "../../context/CartContext";
 import ProductDetailSkeleton from "../../components/ProductDetailSkeleton";
-import type { Product } from "../../types/database";
+import type { Product, Category } from "../../types/database";
 
 const ProductView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { addToCart } = useContext(CartContext);
+  const { addToCart, buyNow } = useContext(CartContext);
   
   const [product, setProduct] = useState<Product | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [selectedSize, setSelectedSize] = useState<string>("M");
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   const sizes = ["XS", "S", "M", "L", "XL", "XXL"];
 
+  const isAccessory = () => {
+    if (!product || !product.category_id) return false;
+    const category = categories.find(cat => cat.id === product.category_id);
+    return category?.name === 'Accessories';
+  };
+
   useEffect(() => {
-    const fetchProduct = async () => {
+    const fetchData = async () => {
       if (!id) return;
       
       setLoading(true);
       setError(null);
       try {
-        const data = await productService.getAll();
-        const foundProduct = data.find(p => p.id === id);
+        // Fetch categories
+        const categoriesData = await categoryService.getAll();
+        setCategories(categoriesData);
+        
+        // Fetch products
+        const productsData = await productService.getAll();
+        const foundProduct = productsData.find(p => p.id === id);
         
         if (foundProduct) {
           setProduct(foundProduct);
@@ -40,18 +52,19 @@ const ProductView: React.FC = () => {
       }
     };
 
-    fetchProduct();
+    fetchData();
   }, [id]);
 
   const handleAddToCart = () => {
     if (product) {
-      addToCart(product, selectedSize);
+      // Don't pass size for accessories
+      addToCart(product, isAccessory() ? undefined : selectedSize);
     }
   };
 
   const handleBuyNow = () => {
     if (product) {
-      addToCart(product, selectedSize);
+      buyNow(product, isAccessory() ? undefined : selectedSize);
       navigate("/checkout");
     }
   };
@@ -107,25 +120,27 @@ const ProductView: React.FC = () => {
             </p>
           </div>
 
-          {/* Size Picker */}
-          <div className="mb-8">
-            <h2 className="text-xs uppercase tracking-wide text-gray-600 mb-3">Select Size</h2>
-            <div className="flex flex-wrap gap-3">
-              {sizes.map((size) => (
-                <button
-                  key={size}
-                  onClick={() => setSelectedSize(size)}
-                  className={`w-12 h-12 border text-sm font-light transition-colors ${
-                    selectedSize === size
-                      ? "bg-black text-white border-black"
-                      : "bg-white text-black border-gray-300 hover:border-black"
-                  }`}
-                >
-                  {size}
-                </button>
-              ))}
+          {/* Size Picker - Only show for non-accessories */}
+          {!isAccessory() && (
+            <div className="mb-8">
+              <h2 className="text-xs uppercase tracking-wide text-gray-600 mb-3">Select Size</h2>
+              <div className="flex flex-wrap gap-3">
+                {sizes.map((size) => (
+                  <button
+                    key={size}
+                    onClick={() => setSelectedSize(size)}
+                    className={`w-12 h-12 border text-sm font-light transition-colors ${
+                      selectedSize === size
+                        ? "bg-black text-white border-black"
+                        : "bg-white text-black border-gray-300 hover:border-black"
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex gap-4 mb-12">
