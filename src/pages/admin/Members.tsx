@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../api/api';
-import { Edit, Trash2, X, Mail, Shield, Eye, EyeOff } from 'lucide-react';
+import { Edit, Trash2, X, Mail, Shield, Eye, EyeOff, UserCheck } from 'lucide-react';
 
 interface Member {
   user_id: string;
@@ -291,8 +291,11 @@ const Members: React.FC = () => {
   }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6">Members</h1>
+    <div className="container mx-auto px-4 py-6 max-w-7xl">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6">
+        <UserCheck className="w-6 h-6 sm:w-8 sm:h-8" />
+        <h1 className="text-2xl sm:text-3xl font-bold">Team Members</h1>
+      </div>
       <div className="bg-white p-6 rounded-lg shadow-md">
         <p className="text-gray-600 mb-6">Manage your team members, assign roles, and oversee employee activities.</p>
 

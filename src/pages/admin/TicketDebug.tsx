@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, supportTicketService } from '../../api/api';
+import { Bug } from 'lucide-react';
 
 const TicketDebug: React.FC = () => {
   const [diagnostics, setDiagnostics] = useState<{
@@ -62,8 +63,11 @@ const TicketDebug: React.FC = () => {
   };
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen">
-      <h1 className="text-3xl font-bold mb-6">Support Ticket Diagnostics</h1>
+    <div className="container mx-auto px-4 py-6 max-w-7xl">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6">
+        <Bug className="w-6 h-6 sm:w-8 sm:h-8" />
+        <h1 className="text-2xl sm:text-3xl font-bold">Support Ticket Diagnostics</h1>
+      </div>
       
       <div className="bg-white p-6 rounded-lg shadow-md mb-6">
         <h2 className="text-xl font-semibold mb-4">Status</h2>

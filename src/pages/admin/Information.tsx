@@ -1,9 +1,13 @@
 import React from 'react';
+import { Info } from 'lucide-react';
 
 const Information: React.FC = () => {
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6">Information</h1>
+    <div className="container mx-auto px-4 py-6 max-w-7xl">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6">
+        <Info className="w-6 h-6 sm:w-8 sm:h-8" />
+        <h1 className="text-2xl sm:text-3xl font-bold">System Information</h1>
+      </div>
       <div className="bg-white p-6 rounded-lg shadow-md">
         <p className="text-gray-600 mb-6">Access system information, documentation, and helpful resources.</p>
 

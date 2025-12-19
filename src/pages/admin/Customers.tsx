@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { customerService, supportTicketService } from '../../api/api';
-import { Trash2, AlertTriangle, Eye, MessageSquare, UserX } from 'lucide-react';
+import { Trash2, AlertTriangle, Eye, MessageSquare, UserX, Users } from 'lucide-react';
 
 interface Customer {
   user_id: string;
@@ -147,8 +147,11 @@ const Customers: React.FC = () => {
   }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6">Customers</h1>
+    <div className="container mx-auto px-4 py-6 max-w-7xl">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6">
+        <Users className="w-6 h-6 sm:w-8 sm:h-8" />
+        <h1 className="text-2xl sm:text-3xl font-bold">Customer Management</h1>
+      </div>
       <div className="bg-white p-6 rounded-lg shadow-md">
         <p className="text-gray-600 mb-6">Manage your customers, view their information, and handle support tickets.</p>
 
