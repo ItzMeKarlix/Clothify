@@ -27,6 +27,35 @@ const Login: React.FC = () => {
   const [mfaRequired, setMfaRequired] = useState<boolean>(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
+  // Check if user is already authenticated and redirect accordingly
+  useEffect(() => {
+    const checkAuthAndRedirect = async () => {
+      try {
+        const session = await authService.getCurrentSession();
+        if (session && session.user?.id) {
+          // User is authenticated, check their role
+          const role = await userService.getUserRole(session.user.id);
+          
+          if (role === 'admin') {
+            navigate('/admin/dashboard');
+            return;
+          } else if (role === 'employee') {
+            navigate('/employee/dashboard');
+            return;
+          }
+          // If role is not admin/employee, stay on login page (they might be a regular user)
+        }
+      } catch (error) {
+        console.error('Error checking authentication:', error);
+        // Stay on login page if there's an error
+      }
+    };
+
+    // Run check after a short delay to allow the form to render first
+    const timer = setTimeout(checkAuthAndRedirect, 100);
+    return () => clearTimeout(timer);
+  }, [navigate]);
+
   // Load Cloudflare Turnstile
   useEffect(() => {
     if (window.turnstile) return;

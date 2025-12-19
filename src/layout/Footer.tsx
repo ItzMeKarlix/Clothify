@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import logo from "../assets/logo.svg";
+import SellerLoginLink from "../components/SellerLoginLink";
 
 const Footer: React.FC = () => (
   <footer className="bg-white border-t border-gray-100 mt-auto">
@@ -41,7 +42,7 @@ const Footer: React.FC = () => (
         <div>
           <h4 className="text-black font-light mb-4 text-sm uppercase tracking-wide">Account</h4>
           <ul className="space-y-3 text-sm text-gray-600 font-light">
-            <li><Link to="/login" className="hover:text-black transition-colors">Seller Login</Link></li>
+            <SellerLoginLink />
             <li><Link to="/cart" className="hover:text-black transition-colors">My Cart</Link></li>
           </ul>
         </div>
