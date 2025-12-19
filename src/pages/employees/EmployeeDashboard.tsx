@@ -1,49 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { productService, categoryService, authService, userService } from "../../api/api"; // userService added
+import { productService, categoryService } from "../../api/api";
 import EditProductForm from "./EditProductForm";
 import type { Product, Category } from "../../types/database";
 import toast from "react-hot-toast";
 
 const EmployeeDashboard: React.FC = () => {
-  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const session = await authService.getCurrentSession();
-        if (!session?.user?.id) {
-          navigate("/login");
-          return;
-        }
-
-        // ✅ Fetch role from user_roles table
-        const role = await userService.getUserRole(session.user.id);
-        if (role !== "employee") {
-          navigate("/login");
-          return;
-        }
-
-        setAuthorized(true);
-      } catch (err) {
-        navigate("/login");
-      } finally {
-        setLoading(false);
-      }
+    const fetchData = async () => {
+      await Promise.all([fetchProducts(), fetchCategories()]);
+      setLoading(false);
     };
-
-    checkAuth();
-  }, [navigate]);
-
-  useEffect(() => {
-    if (authorized) {
-      fetchProducts();
-      fetchCategories();
-    }
-  }, [authorized]);
+    fetchData();
+  }, []);
 
   const fetchProducts = async () => {
     const data = await productService.getAll();

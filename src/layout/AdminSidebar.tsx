@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -13,6 +13,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Home, ShoppingCart, Package, Users, CreditCard, LogOut, Settings, Info, Users2 } from "lucide-react";
+import { authService } from "../api/api";
+import toast from "react-hot-toast";
 import Logo from "@/assets/logo.svg";
 
 const mainLinks = [
@@ -30,6 +32,18 @@ const otherLinks = [
 ];
 
 export function AdminSidebar() {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+      navigate("/login");
+      toast.success("Logged out successfully");
+    } catch (err) {
+      console.error("Logout error:", err);
+      toast.error("Failed to logout");
+    }
+  };
   const location = useLocation();
   const { state } = useSidebar();
 
@@ -105,11 +119,9 @@ export function AdminSidebar() {
       <SidebarFooter className="border-t">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Logout">
-              <Link to="/">
-                <LogOut className="h-8 w-8" />
-                <span className="text-sm">Logout</span>
-              </Link>
+            <SidebarMenuButton onClick={handleLogout} tooltip="Logout">
+              <LogOut className="h-8 w-8" />
+              <span className="text-sm">Logout</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

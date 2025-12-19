@@ -4,6 +4,7 @@ import Layout from "./layout/Layout";
 import SupportLayout from "./layout/SupportLayout";
 import AdminLayout from "./layout/AdminLayout";
 import EmployeeLayout from "./layout/EmployeeLayout";
+import ProtectedRoute from "./components/ProtectedRoute";
 import Home from "./pages/Home";
 import Products from "./pages/products/Products";
 import ProductView from "./pages/products/ProductView";
@@ -56,7 +57,11 @@ const App: React.FC = () => {
           <Route path="/login" element={<Layout><Login /></Layout>} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
-          <Route path="/employee-dashboard" element={<Navigate to="/employee/dashboard" replace />} />
+          <Route path="/employee-dashboard" element={
+            <ProtectedRoute requiredRole="employee">
+              <Navigate to="/employee/dashboard" replace />
+            </ProtectedRoute>
+          } />
           <Route path="/cart" element={<Layout><Cart /></Layout>} />
           <Route path="/tracking" element={<Layout><Tracking /></Layout>} />
           <Route path="/support" element={<Layout><SupportLayout /></Layout>}>
@@ -74,25 +79,85 @@ const App: React.FC = () => {
 
           {/* Employee Routes */}
           <Route path="/employee" element={<EmployeeLayout />}>
-            <Route index element={<Navigate to="/employee/dashboard" replace />} />
-            <Route path="dashboard" element={<EmployeeDashboard />} />
-            <Route path="products" element={<EmployeeProducts />} />
-            <Route path="inventory" element={<EmployeeInventory />} />
-            <Route path="customers" element={<EmployeeCustomers />} />
+            <Route index element={
+              <ProtectedRoute requiredRole="employee">
+                <Navigate to="/employee/dashboard" replace />
+              </ProtectedRoute>
+            } />
+            <Route path="dashboard" element={
+              <ProtectedRoute requiredRole="employee">
+                <EmployeeDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="products" element={
+              <ProtectedRoute requiredRole="employee">
+                <EmployeeProducts />
+              </ProtectedRoute>
+            } />
+            <Route path="inventory" element={
+              <ProtectedRoute requiredRole="employee">
+                <EmployeeInventory />
+              </ProtectedRoute>
+            } />
+            <Route path="customers" element={
+              <ProtectedRoute requiredRole="employee">
+                <EmployeeCustomers />
+              </ProtectedRoute>
+            } />
           </Route>
 
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="products" element={<Admin />} />
-            <Route path="inventory" element={<Inventory />} />
-            <Route path="customers" element={<Customers />} />
-            <Route path="ticket-debug" element={<TicketDebug />} />
-            <Route path="payments" element={<Payments />} />
-            <Route path="members" element={<Members />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="information" element={<Information />} />
+            <Route index element={
+              <ProtectedRoute requiredRole="admin">
+                <Navigate to="/admin/dashboard" replace />
+              </ProtectedRoute>
+            } />
+            <Route path="dashboard" element={
+              <ProtectedRoute requiredRole="admin">
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="products" element={
+              <ProtectedRoute requiredRole="admin">
+                <Admin />
+              </ProtectedRoute>
+            } />
+            <Route path="inventory" element={
+              <ProtectedRoute requiredRole="admin">
+                <Inventory />
+              </ProtectedRoute>
+            } />
+            <Route path="customers" element={
+              <ProtectedRoute requiredRole="admin">
+                <Customers />
+              </ProtectedRoute>
+            } />
+            <Route path="ticket-debug" element={
+              <ProtectedRoute requiredRole="admin">
+                <TicketDebug />
+              </ProtectedRoute>
+            } />
+            <Route path="payments" element={
+              <ProtectedRoute requiredRole="admin">
+                <Payments />
+              </ProtectedRoute>
+            } />
+            <Route path="members" element={
+              <ProtectedRoute requiredRole="admin">
+                <Members />
+              </ProtectedRoute>
+            } />
+            <Route path="settings" element={
+              <ProtectedRoute requiredRole="admin">
+                <Settings />
+              </ProtectedRoute>
+            } />
+            <Route path="information" element={
+              <ProtectedRoute requiredRole="admin">
+                <Information />
+              </ProtectedRoute>
+            } />
           </Route>
         </Routes>
       </Router>

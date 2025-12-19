@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { productService, storageService, categoryService, authService, userService } from "../../api/api";
+import { productService, storageService, categoryService } from "../../api/api";
 import AddProductForm from "./AddProductForm";
 import EditProductForm from "./EditProductForm";
 import type { Product, Category } from "../../types/database";
@@ -8,48 +7,18 @@ import toast from "react-hot-toast";
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 const Admin: React.FC = () => {
-  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Check auth and role from user_roles table
+  // Fetch products and categories on component mount
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const session = await authService.getCurrentSession();
-        if (!session || !session.user?.id) {
-          navigate("/login");
-          return;
-        }
-
-        // Fetch role directly from user_roles
-        const role = await userService.getUserRole(session.user.id);
-        if (role !== "admin") {
-          navigate("/login");
-          return;
-        }
-
-        setAuthorized(true);
-      } catch (err) {
-        console.error("Auth error:", err);
-        navigate("/login");
-      } finally {
-        setLoading(false);
-      }
+    const fetchData = async () => {
+      await Promise.all([fetchProducts(), fetchCategories()]);
+      setLoading(false);
     };
-
-    checkAuth();
-  }, [navigate]);
-
-  // Fetch products and categories once authorized
-  useEffect(() => {
-    if (authorized) {
-      fetchProducts();
-      fetchCategories();
-    }
-  }, [authorized]);
+    fetchData();
+  }, []);
 
   const fetchProducts = async () => {
     try {
@@ -97,14 +66,6 @@ const Admin: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <p className="text-gray-600 font-light text-sm">Loading...</p>
-      </div>
-    );
-  }
-
-  if (!authorized) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-600 font-light text-sm">Redirecting to login...</p>
       </div>
     );
   }

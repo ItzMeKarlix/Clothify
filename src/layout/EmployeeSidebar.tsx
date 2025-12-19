@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Home, ShoppingCart, Package, Users, LogOut } from "lucide-react";
 import Logo from "@/assets/logo.svg";
-import { authService } from "@/api/api";
+import { authService } from "../api/api";
 import toast from "react-hot-toast";
 
 const mainLinks = [
