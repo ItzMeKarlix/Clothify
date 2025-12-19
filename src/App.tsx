@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Layout from "./layout/Layout";
 import SupportLayout from "./layout/SupportLayout";
 import AdminLayout from "./layout/AdminLayout";
+import EmployeeLayout from "./layout/EmployeeLayout";
 import Home from "./pages/Home";
 import Products from "./pages/products/Products";
 import ProductView from "./pages/products/ProductView";
@@ -32,6 +33,9 @@ import PrivacyPolicy from "./pages/support/PrivacyPolicy";
 import Warranty from "./pages/support/Warranty";
 import NotFound from "./pages/NotFound";
 import EmployeeDashboard from "./pages/employees/EmployeeDashboard";
+import EmployeeInventory from "./pages/employees/EmployeeInventory";
+import EmployeeProducts from "./pages/employees/EmployeeProducts";
+import EmployeeCustomers from "./pages/employees/EmployeeCustomers";
 import { Toaster } from "react-hot-toast";
 
 
@@ -51,7 +55,7 @@ const App: React.FC = () => {
           <Route path="/login" element={<Layout><Login /></Layout>} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
-          <Route path="/employee-dashboard" element={<EmployeeDashboard/>}></Route>
+          <Route path="/employee-dashboard" element={<Navigate to="/employee/dashboard" replace />} />
           <Route path="/cart" element={<Layout><Cart /></Layout>} />
           <Route path="/tracking" element={<Layout><Tracking /></Layout>} />
           <Route path="/support" element={<Layout><SupportLayout /></Layout>}>
@@ -66,6 +70,15 @@ const App: React.FC = () => {
           </Route>
           <Route path="/checkout" element={<Layout><Checkout /></Layout>} />
           <Route path="*" element={<NotFound />} />
+
+          {/* Employee Routes */}
+          <Route path="/employee" element={<EmployeeLayout />}>
+            <Route index element={<Navigate to="/employee/dashboard" replace />} />
+            <Route path="dashboard" element={<EmployeeDashboard />} />
+            <Route path="products" element={<EmployeeProducts />} />
+            <Route path="inventory" element={<EmployeeInventory />} />
+            <Route path="customers" element={<EmployeeCustomers />} />
+          </Route>
 
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLayout />}>

@@ -1,5 +1,5 @@
 import { createClient, } from '@supabase/supabase-js';
-import type { Product, ProductInsert, ProductUpdate, Order, OrderInsert, Category, Gender } from '../types/database';
+import type { Product, ProductInsert, ProductUpdate, Order, OrderInsert, Category, Gender, SupportTicket, SupportTicketInsert, SupportTicketUpdate, TicketResponse, TicketResponseInsert, SupportTicketCategory } from '../types/database';
 
 // Initialize Supabase client
 
@@ -291,6 +291,285 @@ export const authService = {
     if (error) throw error;
     return data;
   },
+};
+
+// Support Ticket Services
+export const supportTicketService = {
+  // Get all support tickets (admin view)
+  async getAll(): Promise<SupportTicket[]> {
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .select(`
+        *,
+        support_ticket_categories!inner(name),
+        customer:customer_id(email),
+        assigned_user:assigned_to(email)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Transform the data to match our interface
+    return (data || []).map(ticket => ({
+      ...ticket,
+      customer_email: ticket.customer?.email,
+      assigned_to_email: ticket.assigned_user?.email,
+      category_name: ticket.support_ticket_categories?.name
+    }));
+  },
+
+  // Get support tickets for current user (customer view)
+  async getMyTickets(): Promise<SupportTicket[]> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .select(`
+        *,
+        support_ticket_categories(name)
+      `)
+      .eq('customer_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Transform the data to match our interface
+    return (data || []).map(ticket => ({
+      ...ticket,
+      customer_email: user.email,
+      category_name: ticket.support_ticket_categories?.name
+    }));
+  },
+
+  // Get support tickets by email (for anonymous users)
+  async getTicketsByEmail(email: string): Promise<SupportTicket[]> {
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .select(`
+        *,
+        support_ticket_categories(name)
+      `)
+      .eq('customer_email', email)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Transform the data to match our interface
+    return (data || []).map(ticket => ({
+      ...ticket,
+      category_name: ticket.support_ticket_categories?.name
+    }));
+  },
+
+  // Create a new support ticket
+  async create(ticketData: SupportTicketInsert): Promise<SupportTicket> {
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .insert([ticketData])
+      .select(`
+        *,
+        support_ticket_categories(name),
+        customer:customer_id(email),
+        assigned_user:assigned_to(email)
+      `)
+      .single();
+
+    if (error) throw error;
+    if (!data) throw new Error('Failed to create support ticket');
+
+    return {
+      ...data,
+      customer_email: data.customer?.email,
+      assigned_to_email: data.assigned_user?.email,
+      category_name: data.support_ticket_categories?.name
+    };
+  },
+
+  // Update a support ticket
+  async update(id: number, updates: SupportTicketUpdate): Promise<SupportTicket> {
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .update(updates)
+      .eq('id', id)
+      .select(`
+        *,
+        support_ticket_categories(name),
+        customer:customer_id(email),
+        assigned_user:assigned_to(email)
+      `)
+      .single();
+
+    if (error) throw error;
+    if (!data) throw new Error('Failed to update support ticket');
+
+    return {
+      ...data,
+      customer_email: data.customer?.email,
+      assigned_to_email: data.assigned_user?.email,
+      category_name: data.support_ticket_categories?.name
+    };
+  },
+
+  // Delete a support ticket
+  async delete(id: number): Promise<void> {
+    const { error } = await supabase
+      .from('support_tickets')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  // Get ticket responses
+  async getResponses(ticketId: number): Promise<TicketResponse[]> {
+    const { data, error } = await supabase
+      .from('ticket_responses')
+      .select(`
+        *,
+        responder:responder_id(email)
+      `)
+      .eq('ticket_id', ticketId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    return (data || []).map(response => ({
+      ...response,
+      responder_email: response.responder?.email
+    }));
+  },
+
+  // Add a response to a ticket
+  async addResponse(responseData: TicketResponseInsert): Promise<TicketResponse> {
+    const { data, error } = await supabase
+      .from('ticket_responses')
+      .insert([responseData])
+      .select(`
+        *,
+        responder:responder_id(email)
+      `)
+      .single();
+
+    if (error) throw error;
+    if (!data) throw new Error('Failed to add response');
+
+    return {
+      ...data,
+      responder_email: data.responder?.email
+    };
+  }
+};
+
+// Support Ticket Category Service
+export const supportTicketCategoryService = {
+  // Get all ticket categories
+  async getAll(): Promise<SupportTicketCategory[]> {
+    const { data, error } = await supabase
+      .from('support_ticket_categories')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  }
+};
+
+// Customer Service (for admin use)
+export const customerService = {
+  // Get all customers with their details
+  async getAll(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('user_details')
+      .select('*')
+      .order('user_created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Delete a customer (admin only)
+  async deleteCustomer(userId: string): Promise<void> {
+    // First delete from user_roles (this will cascade if set up)
+    const { error: roleError } = await supabase
+      .from('user_roles')
+      .delete()
+      .eq('user_id', userId);
+
+    if (roleError) throw roleError;
+
+    // Note: Deleting from auth.users requires admin privileges
+    // This would typically be done through Supabase admin API
+    // For now, we'll just remove their role which effectively disables them
+  }
+};
+
+// Support Ticket Attachments Service
+export const supportTicketAttachmentService = {
+  // Upload attachment for a ticket
+  async uploadAttachment(ticketId: number, file: File, responderId: string): Promise<any> {
+    try {
+      // First upload file to storage
+      const fileUrl = await storageService.uploadImage(file, 'support-attachments');
+
+      // Then create attachment record
+      const { data, error } = await supabase
+        .from('ticket_attachments')
+        .insert([{
+          ticket_id: ticketId,
+          file_name: file.name,
+          file_url: fileUrl,
+          file_size: file.size,
+          mime_type: file.type,
+          uploaded_by: responderId
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error uploading attachment:', error);
+      throw error;
+    }
+  },
+
+  // Get attachments for a ticket
+  async getAttachments(ticketId: number): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('ticket_attachments')
+      .select('*')
+      .eq('ticket_id', ticketId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Delete attachment
+  async deleteAttachment(attachmentId: number): Promise<void> {
+    // First get the attachment to get the file URL
+    const { data: attachment, error: fetchError } = await supabase
+      .from('ticket_attachments')
+      .select('file_url')
+      .eq('id', attachmentId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Delete from storage
+    if (attachment?.file_url) {
+      await storageService.deleteImage(attachment.file_url);
+    }
+
+    // Delete from database
+    const { error } = await supabase
+      .from('ticket_attachments')
+      .delete()
+      .eq('id', attachmentId);
+
+    if (error) throw error;
+  }
 };
 
 export default supabase;

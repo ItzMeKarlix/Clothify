@@ -133,7 +133,11 @@ const Login: React.FC = () => {
 
       // Fetch user role after successful OTP
       const role = await userService.getUserRole(currentUserId);
-      if (!role) throw new Error("No role assigned for this user");
+      if (!role) {
+        toast.error("Your account is pending approval. Please contact an administrator.");
+        setError("Your account is pending approval. Please contact an administrator for access.");
+        return;
+      }
 
       toast.success("Verification successful!");
       if (role === "admin") navigate("/admin");

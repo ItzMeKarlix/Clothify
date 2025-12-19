@@ -11,17 +11,6 @@ const EmployeeDashboard: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
-
-  const handleLogout = async () => {
-    try {
-      await authService.logout();
-      navigate("/login");
-      toast.success("Logged out successfully");
-    } catch (err) {
-      console.error("Logout error:", err);
-      toast.error("Failed to logout");
-    }
-  };
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -69,15 +58,8 @@ const EmployeeDashboard: React.FC = () => {
   if (loading) return <p>Loading...</p>;
 
   return (
-    <div className="container mx-auto px-6 py-16">
-      <h1 className="text-4xl mb-8">Employee Dashboard 
-        <button
-          onClick={handleLogout}
-          className="bg-black mx-[120em] hover:bg-gray-800 text-white px-6 py-2 text-xs uppercase tracking-wide transition-colors"
-        >
-          Logout
-        </button>
-      </h1>
+    <div>
+      <h1 className="text-4xl mb-8">Employee Dashboard</h1>
       
       <div className="space-y-4">
         {products.map((p) => (
