@@ -26,8 +26,7 @@ const Login: React.FC = () => {
   const [otp, setOtp] = useState<string>("");
   const [mfaRequired, setMfaRequired] = useState<boolean>(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin;
+  const [storedCredentials, setStoredCredentials] = useState<{email: string, password: string} | null>(null);
 
   // Check if user is already authenticated and redirect accordingly
   useEffect(() => {
@@ -113,22 +112,32 @@ const Login: React.FC = () => {
       const token = window.turnstile.getResponse();
       if (!token) throw new Error("Please complete the CAPTCHA");
 
-      // Supabase login
+      // Validate credentials only (don't keep session)
       const session = await authService.login(sanitizedEmail, sanitizedPassword);
       if (!session?.user?.id) throw new Error("Failed to login");
       setCurrentUserId(session.user.id);
+      
+      // Store credentials for later login after OTP verification
+      setStoredCredentials({ email: sanitizedEmail, password: sanitizedPassword });
+      
+      // Immediately sign out to prevent session bypass
+      await authService.logout();
 
-      // Trigger OTP email via backend
+      // Trigger OTP email via Supabase Edge Function
       try {
-        const res = await fetch(`${baseUrl}/api/send`, {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        const res = await fetch(`${supabaseUrl}/functions/v1/send-otp`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${supabaseAnonKey}`
+          },
           body: JSON.stringify({ email: sanitizedEmail }),
-          
         });
 
-        if (!res.ok) throw new Error("Failed to send verification code");
-        console.log(email)
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to send verification code");
         
         toast.success("A verification code has been sent to your email.");
         setMfaRequired(true); // Show OTP input
@@ -150,23 +159,38 @@ const Login: React.FC = () => {
   // Handle OTP verification
   const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUserId) return;
+    if (!currentUserId || !storedCredentials) return;
     setLoading(true);
     setError(null);
 
     try {
       const sanitizedEmail = sanitizeString(email);
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-      const res = await fetch(`${baseUrl}/api/verify`, {
+      const res = await fetch(`${supabaseUrl}/functions/v1/verify-otp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${supabaseAnonKey}`
+        },
         body: JSON.stringify({ email: sanitizedEmail, code: otp }),
       });
-      if (!res.ok) throw new Error("Invalid verification code");
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Invalid verification code");
+
+      // OTP verified - now login with stored credentials
+      const session = await authService.login(storedCredentials.email, storedCredentials.password);
+      if (!session?.user?.id) throw new Error("Failed to complete login");
+      
+      // Clear stored credentials
+      setStoredCredentials(null);
 
       // Fetch user role after successful OTP
       const role = await userService.getUserRole(currentUserId);
       if (!role) {
+        await authService.logout();
         toast.error("Your account is pending approval. Please contact an administrator.");
         setError("Your account is pending approval. Please contact an administrator for access.");
         return;
