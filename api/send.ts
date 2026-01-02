@@ -1,10 +1,16 @@
-import { kv } from "@vercel/kv";
+import { Redis }from "@upstash/redis";
 import crypto from "crypto";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY!);
 const OTP_TTL_SECONDS = 300; // 5 minutes
 const OTP_DEBUG = false;
+
+// Connect to Upstash Redis
+const redis = new Redis({
+  url: process.env.KV_URL!,
+  token: process.env.KV_REST_API_TOKEN!,
+});
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") {
@@ -17,8 +23,8 @@ export default async function handler(req: any, res: any) {
 
     const code = crypto.randomInt(100000, 150000).toString();
 
-    // Store OTP in Vercel KV
-    await kv.set(`otp:${email}`, code, { ex: OTP_TTL_SECONDS });
+    // Store OTP in Redis with TTL
+    await redis.set(`otp:${email}`, code, { ex: OTP_TTL_SECONDS });
 
     if (OTP_DEBUG) {
       console.log(`🔐 OTP DEBUG | Email: ${email} | Code: ${code}`);
@@ -33,7 +39,7 @@ export default async function handler(req: any, res: any) {
 
     return res.status(200).json({ message: "OTP sent to email" });
   } catch (err: any) {
-    console.error(err);
+    console.error("Send OTP error:", err);
     return res.status(500).json({ error: "Server error", message: err.message });
   }
 }
