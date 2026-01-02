@@ -27,7 +27,7 @@ const Login: React.FC = () => {
   const [mfaRequired, setMfaRequired] = useState<boolean>(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  const baseUrl = import.meta.env.VITE_API_BASE_URL;
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin;
 
   // Check if user is already authenticated and redirect accordingly
   useEffect(() => {
