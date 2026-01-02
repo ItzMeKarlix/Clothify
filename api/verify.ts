@@ -1,4 +1,5 @@
 import { Redis } from "@upstash/redis";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 // Connect to Upstash Redis
 const redis = new Redis({
@@ -6,7 +7,7 @@ const redis = new Redis({
   token: process.env.KV_REST_API_TOKEN!,
 });
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -15,7 +16,7 @@ export default async function handler(req: any, res: any) {
     const { email, code } = req.body;
     if (!email || !code) return res.status(400).json({ error: "Missing email or code" });
 
-    const storedCode = await redis.get(`otp:${email}`);
+    const storedCode = await redis.get<string>(`otp:${email}`);
     if (!storedCode) return res.status(400).json({ error: "OTP expired or not found" });
 
     if (storedCode !== code) return res.status(400).json({ error: "Invalid code" });

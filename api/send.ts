@@ -1,6 +1,7 @@
-import { Redis }from "@upstash/redis";
+import { Redis } from "@upstash/redis";
 import crypto from "crypto";
 import { Resend } from "resend";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 const resend = new Resend(process.env.RESEND_API_KEY!);
 const OTP_TTL_SECONDS = 300; // 5 minutes
@@ -12,7 +13,7 @@ const redis = new Redis({
   token: process.env.KV_REST_API_TOKEN!,
 });
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
