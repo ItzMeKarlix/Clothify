@@ -27,6 +27,8 @@ const Login: React.FC = () => {
   const [mfaRequired, setMfaRequired] = useState<boolean>(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
+  const baseUrl = import.meta.env.VITE_API_BASE_URL;
+
   // Check if user is already authenticated and redirect accordingly
   useEffect(() => {
     const checkAuthAndRedirect = async () => {
@@ -104,6 +106,7 @@ const Login: React.FC = () => {
 
       const sanitizedEmail = sanitizeString(email);
       const sanitizedPassword = sanitizeString(password);
+      
 
       // Turnstile check
       if (!window.turnstile) throw new Error("CAPTCHA not loaded");
@@ -117,7 +120,7 @@ const Login: React.FC = () => {
 
       // Trigger OTP email via backend
       try {
-        const res = await fetch("/api/send", {
+        const res = await fetch(`${baseUrl}/api/send`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: sanitizedEmail }),
@@ -153,7 +156,8 @@ const Login: React.FC = () => {
 
     try {
       const sanitizedEmail = sanitizeString(email);
-      const res = await fetch("/api/verify", {
+
+      const res = await fetch(`${baseUrl}/api/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: sanitizedEmail, code: otp }),
