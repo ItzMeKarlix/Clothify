@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { authService, userService } from '../api/api';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole: 'admin' | 'employee';
+  requiredRole?: 'admin' | 'employee';
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
   const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -21,6 +22,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
         if (!session || !session.user?.id) {
           console.log('🔐 ProtectedRoute: No session or user ID, not authorized');
           setAuthorized(false);
+          setLoading(false);
+          return;
+        }
+
+        // If no specific role is required (like for settings during onboarding), just check session
+        if (!requiredRole) {
+          console.log('🔐 ProtectedRoute: No role required, authorized by session only');
+          setAuthorized(true);
           setLoading(false);
           return;
         }
