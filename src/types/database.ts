@@ -247,6 +247,7 @@ export interface TicketResponse {
   updated_at: string;
   // Joined data
   responder_email?: string;
+  responder_name?: string;
 }
 
 export interface TicketResponseInsert {

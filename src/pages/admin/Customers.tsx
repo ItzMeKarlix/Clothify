@@ -59,6 +59,7 @@ const Customers: React.FC = () => {
   const [respondModal, setRespondModal] = useState<{
     ticket: SupportTicket | null;
     response: string;
+    responses: any[];
   } | null>(null);
   const [confirmResolve, setConfirmResolve] = useState<SupportTicket | null>(null);
   const [assignModal, setAssignModal] = useState<{
@@ -206,18 +207,20 @@ const Customers: React.FC = () => {
     try {
       // Fetch responses for this ticket to display in the respond modal
       const details = await supportTicketService.getTicketWithResponses(ticket.id);
-      setTicketDetails({
-        ticket: details.ticket,
+      setRespondModal({
+        ticket,
+        response: '',
         responses: details.responses
       });
     } catch (error) {
       console.error('Error fetching ticket responses:', error);
+      // Still open the modal even if responses fail to load
+      setRespondModal({
+        ticket,
+        response: '',
+        responses: []
+      });
     }
-    
-    setRespondModal({
-      ticket,
-      response: ''
-    });
   };
 
   const handleMarkResolved = (ticket: SupportTicket) => {
@@ -258,7 +261,7 @@ const Customers: React.FC = () => {
     }
   };
 
-  const handleSubmitResponse = async (ticketId?: string, responseText?: string) => {
+  const handleSubmitResponse = async (ticketId?: string | number, responseText?: string) => {
     // Support both old modal style and new integrated style
     const response = responseText || (respondModal ? respondModal.response : '');
     const id = ticketId || (respondModal?.ticket?.id);
@@ -270,7 +273,7 @@ const Customers: React.FC = () => {
       if (!user) throw new Error('Not authenticated');
 
       await supportTicketService.addResponse({
-        ticket_id: id,
+        ticket_id: Number(id),
         responder_id: user.id,
         response_text: response,
         is_internal: false
@@ -280,17 +283,21 @@ const Customers: React.FC = () => {
       setNewResponse('');
       if (respondModal) setRespondModal(null);
       
-      // Refresh ticket details
-      if (ticketDetails) {
-        const details = await supportTicketService.getTicketWithResponses(ticketDetails.ticket!.id);
-        setTicketDetails({
-          ticket: details.ticket,
+      // Refresh ticket responses in the modal
+      if (respondModal?.ticket) {
+        const details = await supportTicketService.getTicketWithResponses(respondModal.ticket.id);
+        setRespondModal(prev => prev ? {
+          ...prev,
+          response: '',
           responses: details.responses
-        });
+        } : null);
       }
       fetchSupportTickets();
     } catch (error) {
-      console.error('Error submitting response:', error);
+      console.error('❌ Error submitting response:', error);
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+      }
       toast.error('Failed to submit response', { id: 'customers-response-failed' });
     }
   };
@@ -929,12 +936,12 @@ const Customers: React.FC = () => {
               {/* Left Side - Conversation History */}
               <div className="flex-1 border-r overflow-y-auto p-6">
                 <h4 className="font-semibold text-sm mb-4">Conversation</h4>
-                {ticketDetails?.responses && ticketDetails.responses.length > 0 ? (
+                {respondModal?.responses && respondModal.responses.length > 0 ? (
                   <div className="space-y-3">
-                    {ticketDetails.responses.map((response, index) => (
+                    {respondModal.responses.map((response, index) => (
                       <div key={index} className="border rounded-lg p-4 bg-gray-50">
                         <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium text-sm">{response.responder_email || 'Unknown'}</span>
+                          <span className="font-medium text-sm">{response.responder_name || response.responder_email || 'Unknown'}</span>
                           <span className="text-xs text-gray-500">{new Date(response.created_at).toLocaleString()}</span>
                         </div>
                         <p className="text-sm whitespace-pre-wrap">{response.response_text}</p>

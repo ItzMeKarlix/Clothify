@@ -1052,17 +1052,20 @@ export const supportTicketService = {
     // Get unique responder IDs
     const responderIds = [...new Set((responses || []).map(r => r.responder_id).filter(id => id))];
 
-    // Fetch responder emails if we have responder IDs
-    let responderEmails: { [key: string]: string } = {};
+    // Fetch responder names from user_roles table
+    let responderInfo: { [key: string]: { email: string; name: string } } = {};
     if (responderIds.length > 0) {
       const { data: users, error: usersError } = await supabase
-        .from('user_details')
-        .select('user_id, email')
+        .from('user_roles')
+        .select('user_id, name')
         .in('user_id', responderIds);
 
       if (!usersError && users) {
         users.forEach(user => {
-          responderEmails[user.user_id] = user.email || 'Unknown';
+          responderInfo[user.user_id] = {
+            email: user.user_id,
+            name: user.name || 'Unknown'
+          };
         });
       }
     }
@@ -1070,27 +1073,108 @@ export const supportTicketService = {
     // Combine the data
     return (responses || []).map(response => ({
       ...response,
-      responder_email: responderEmails[response.responder_id] || null
+      responder_email: responderInfo[response.responder_id]?.email || null,
+      responder_name: responderInfo[response.responder_id]?.name || 'Unknown'
     }));
   },
 
   // Add a response to a ticket
   async addResponse(responseData: TicketResponseInsert): Promise<TicketResponse> {
+    console.log('📝 API: Adding response:', responseData);
+    
+    // Validate data
+    if (!responseData.ticket_id) throw new Error('ticket_id is required');
+    if (!responseData.responder_id) throw new Error('responder_id is required');
+    if (!responseData.response_text) throw new Error('response_text is required');
+
+    // Ensure ticket_id is a number
+    const dataToInsert = {
+      ticket_id: Number(responseData.ticket_id),
+      responder_id: responseData.responder_id,
+      response_text: responseData.response_text,
+      is_internal: responseData.is_internal || false,
+      created_at: new Date().toISOString()
+    };
+
+    console.log('📝 API: Inserting data:', dataToInsert);
+
+    // Insert without trying to fetch relationship
     const { data, error } = await supabase
       .from('ticket_responses')
-      .insert([responseData])
-      .select(`
-        *,
-        responder:responder_id(email)
-      `)
+      .insert([dataToInsert])
+      .select('*')
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ API Error adding response:', error);
+      throw error;
+    }
     if (!data) throw new Error('Failed to add response');
+
+    console.log('✅ API: Response added successfully:', data);
+
+    // Fetch responder name from user_roles table
+    let responderEmail = null;
+    let responderName = null;
+    if (data.responder_id) {
+      const { data: userInfo, error: userError } = await supabase
+        .from('user_roles')
+        .select('name')
+        .eq('user_id', data.responder_id)
+        .single();
+
+      if (!userError && userInfo) {
+        responderName = userInfo.name || 'Unknown';
+      }
+    }
 
     return {
       ...data,
-      responder_email: data.responder?.email
+      responder_email: responderEmail,
+      responder_name: responderName
+    };
+  },
+
+  // Get ticket with responses
+  async getTicketWithResponses(ticketId: number): Promise<{ ticket: SupportTicket | null; responses: TicketResponse[] }> {
+    // Get the ticket
+    const { data: ticket, error: ticketError } = await supabase
+      .from('support_tickets')
+      .select(`
+        *,
+        support_ticket_categories(name)
+      `)
+      .eq('id', ticketId)
+      .single();
+
+    if (ticketError) throw ticketError;
+    if (!ticket) return { ticket: null, responses: [] };
+
+    // Get the responses
+    const responses = await this.getResponses(ticketId);
+
+    // Get assigned user email if needed
+    let assignedEmail = null;
+    if (ticket.assigned_to) {
+      const { data: userInfo, error: userError } = await supabase
+        .from('user_details')
+        .select('email')
+        .eq('user_id', ticket.assigned_to)
+        .single();
+
+      assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+    }
+
+    const transformedTicket: SupportTicket = {
+      ...ticket,
+      customer_email: ticket.customer_email,
+      assigned_to_email: assignedEmail,
+      category_name: ticket.support_ticket_categories?.name
+    };
+
+    return {
+      ticket: transformedTicket,
+      responses
     };
   }
 };
