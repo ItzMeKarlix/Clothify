@@ -70,9 +70,7 @@ serve(async (req) => {
     }
 
     // Invite the user using service role
-    const { data, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(inviteEmail, {
-      data: { password_reset_required: true }  // Mark as needing password reset
-    });
+    const { data, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(inviteEmail);
     if (inviteError) {
       console.error("Invite error:", inviteError);
       return new Response(

@@ -7,6 +7,8 @@ import { Package, TrendingUp, BarChart3, Edit } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Bar, BarChart, Line, LineChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
+import { useOnboarding } from "../../hooks/use-onboarding";
+import { OnboardingModal } from "../../components/OnboardingModal";
 
 // Sample data - in a real app, this would come from your API
 const inventoryData = [
@@ -52,6 +54,7 @@ const chartConfig = {
 };
 
 const EmployeeDashboard: React.FC = () => {
+  const { needsOnboarding, loading: onboardingLoading, userEmail } = useOnboarding();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,10 +77,12 @@ const EmployeeDashboard: React.FC = () => {
     setCategories(data);
   };
 
-  if (loading) return <p>Loading...</p>;
+  if (loading || onboardingLoading) return <p>Loading...</p>;
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-7xl">
+      <OnboardingModal isOpen={needsOnboarding} userEmail={userEmail} />
+
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6">
         <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8" />
         <h1 className="text-2xl sm:text-3xl font-bold">Employee Dashboard</h1>

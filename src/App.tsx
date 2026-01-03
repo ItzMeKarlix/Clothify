@@ -45,7 +45,6 @@ import EmployeeOrders from "./pages/employees/EmployeeOrders";
 import EmployeeSettings from "./pages/employees/EmployeeSettings";
 import EmployeeSupport from "./pages/employees/EmployeeSupport";
 import EmployeeInformation from "./pages/employees/EmployeeInformation";
-import SecuritySettings from "./pages/settings/SecuritySettings";
 
 
 const App: React.FC = () => {
@@ -60,7 +59,6 @@ const App: React.FC = () => {
           <Route path="/women" element={<Layout><Women /></Layout>} />
           <Route path="/accessories" element={<Layout><Accessories /></Layout>} />
           <Route path="/login" element={<Layout><Login /></Layout>} />
-          <Route path="/security-settings" element={<SecuritySettings />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/employee-dashboard" element={

@@ -180,14 +180,6 @@ const Login: React.FC = () => {
       }
 
       toast.success("Verification successful!", { id: "otp-verified" });
-      
-      // Check if password reset is required for new members
-      const user = await authService.getCurrentSession();
-      if (user?.user?.user_metadata?.password_reset_required) {
-        navigate("/security-settings?reset_required=true");
-        return;
-      }
-
       if (role === "admin") navigate("/admin");
       else navigate("/employee-dashboard");
 

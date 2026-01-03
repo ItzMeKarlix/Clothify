@@ -1,5 +1,5 @@
-import React from 'react';
-import { Settings as SettingsIcon, Store, Mail, DollarSign, Bell, Shield, Save } from 'lucide-react';
+import React, { useState } from 'react';
+import { Settings as SettingsIcon, Store, Mail, DollarSign, Bell, Shield, Save, Eye, EyeOff } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,8 +7,57 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { authService } from '../../api/api';
+import toast from 'react-hot-toast';
+import { useSearchParams } from 'react-router-dom';
 
 const Settings: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  const isSecurityTab = searchParams.get('tab') === 'security';
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error('All password fields are required');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters');
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      // Update the password using Supabase auth
+      await authService.updatePassword(newPassword);
+      toast.success('Password updated successfully!');
+      
+      // Clear the form
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      console.error('Password change error:', err);
+      toast.error(err.message || 'Failed to update password');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
   return (
     <div className="container mx-auto px-4 py-6 max-w-7xl">
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6">
@@ -149,9 +198,85 @@ const Settings: React.FC = () => {
 
             <div className="space-y-2">
               <Label className="text-sm font-medium">Change Password</Label>
-              <Button variant="outline" className="w-full">
-                Update Password
-              </Button>
+              {isSecurityTab && (
+                <form onSubmit={handlePasswordChange} className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="current-password" className="text-sm">Current Password</Label>
+                    <div className="relative">
+                      <input
+                        id="current-password"
+                        type={showCurrentPassword ? 'text' : 'password'}
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter current password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                      >
+                        {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="new-password" className="text-sm">New Password</Label>
+                    <div className="relative">
+                      <input
+                        id="new-password"
+                        type={showNewPassword ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter new password (min 8 characters)"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                      >
+                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password" className="text-sm">Confirm New Password</Label>
+                    <div className="relative">
+                      <input
+                        id="confirm-password"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Confirm new password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    disabled={changingPassword}
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                  >
+                    {changingPassword ? 'Updating...' : 'Update Password'}
+                  </Button>
+                </form>
+              )}
+              {!isSecurityTab && (
+                <Button variant="outline" className="w-full">
+                  Update Password
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
