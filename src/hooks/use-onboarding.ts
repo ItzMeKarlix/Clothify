@@ -18,10 +18,10 @@ export const useOnboarding = () => {
         const userId = session.data.session.user.id;
         setUserEmail(session.data.session.user.email || null);
 
-        // Check if user has never signed in
+        // Check if user has completed onboarding
         const { data, error } = await supabase
-          .from('user_details')
-          .select('last_sign_in_at')
+          .from('user_roles')
+          .select('onboarding_completed')
           .eq('user_id', userId)
           .single();
 
@@ -31,8 +31,8 @@ export const useOnboarding = () => {
           return;
         }
 
-        // If last_sign_in_at is null, user has never signed in
-        setNeedsOnboarding(!data?.last_sign_in_at);
+        // If onboarding_completed is false/null, user needs to complete onboarding
+        setNeedsOnboarding(!data?.onboarding_completed);
       } catch (err) {
         console.error('Onboarding check error:', err);
       } finally {

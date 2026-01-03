@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { authService } from '../../api/api';
+import { authService, supabase } from '../../api/api';
 import toast from 'react-hot-toast';
 import { useSearchParams } from 'react-router-dom';
 
@@ -43,14 +43,36 @@ const Settings: React.FC = () => {
 
     setChangingPassword(true);
     try {
+      const session = await supabase.auth.getSession();
+      if (!session.data.session?.user?.id) {
+        toast.error('Session expired');
+        return;
+      }
+
       // Update the password using Supabase auth
       await authService.updatePassword(newPassword);
+
+      // Mark onboarding as completed
+      const { error: updateError } = await supabase
+        .from('user_roles')
+        .update({ onboarding_completed: true })
+        .eq('user_id', session.data.session.user.id);
+
+      if (updateError) {
+        console.warn('Failed to mark onboarding completed:', updateError);
+      }
+
       toast.success('Password updated successfully!');
       
       // Clear the form
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+
+      // Reload page to refresh onboarding status
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (err: any) {
       console.error('Password change error:', err);
       toast.error(err.message || 'Failed to update password');
