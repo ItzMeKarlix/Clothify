@@ -66,6 +66,7 @@ const Customers: React.FC = () => {
     assigneeId: string;
   } | null>(null);
   const [employees, setEmployees] = useState<any[]>([]);
+  const [newResponse, setNewResponse] = useState<string>('');
 
   useEffect(() => {
     fetchCustomers();
@@ -201,7 +202,18 @@ const Customers: React.FC = () => {
     }
   };
 
-  const handleRespondToTicket = (ticket: SupportTicket) => {
+  const handleRespondToTicket = async (ticket: SupportTicket) => {
+    try {
+      // Fetch responses for this ticket to display in the respond modal
+      const details = await supportTicketService.getTicketWithResponses(ticket.id);
+      setTicketDetails({
+        ticket: details.ticket,
+        responses: details.responses
+      });
+    } catch (error) {
+      console.error('Error fetching ticket responses:', error);
+    }
+    
     setRespondModal({
       ticket,
       response: ''
@@ -246,26 +258,40 @@ const Customers: React.FC = () => {
     }
   };
 
-  const handleSubmitResponse = async () => {
-    if (!respondModal || !respondModal.response.trim()) return;
+  const handleSubmitResponse = async (ticketId?: string, responseText?: string) => {
+    // Support both old modal style and new integrated style
+    const response = responseText || (respondModal ? respondModal.response : '');
+    const id = ticketId || (respondModal?.ticket?.id);
+
+    if (!response.trim() || !id) return;
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
       await supportTicketService.addResponse({
-        ticket_id: respondModal.ticket!.id,
+        ticket_id: id,
         responder_id: user.id,
-        response_text: respondModal.response,
+        response_text: response,
         is_internal: false
       });
 
-      setRespondModal(null);
       toast.success('Response added successfully!', { id: 'customers-response-added' });
-      fetchSupportTickets(); // Refresh tickets
+      setNewResponse('');
+      if (respondModal) setRespondModal(null);
+      
+      // Refresh ticket details
+      if (ticketDetails) {
+        const details = await supportTicketService.getTicketWithResponses(ticketDetails.ticket!.id);
+        setTicketDetails({
+          ticket: details.ticket,
+          responses: details.responses
+        });
+      }
+      fetchSupportTickets();
     } catch (error) {
-      console.error('Error adding response:', error);
-      toast.error('Failed to add response', { id: 'customers-response-failed' });
+      console.error('Error submitting response:', error);
+      toast.error('Failed to submit response', { id: 'customers-response-failed' });
     }
   };
 
@@ -866,9 +892,10 @@ const Customers: React.FC = () => {
       {/* Respond to Ticket Modal */}
       {respondModal ? (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
+          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full mx-4 h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="p-6 border-b">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <MessageSquare className="h-6 w-6 text-blue-500" />
                   <h3 className="text-xl font-semibold">Respond to Ticket</h3>
@@ -882,65 +909,64 @@ const Customers: React.FC = () => {
               </div>
 
               {respondModal.ticket && (
-                <div className="space-y-4">
+                <div className="mt-4 flex items-center justify-between">
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Ticket</label>
                     <p className="text-sm font-medium">{respondModal.ticket.subject}</p>
                     <p className="text-xs text-gray-500">#{respondModal.ticket.ticket_number} • {respondModal.ticket.customer_email}</p>
                   </div>
-
-                  {/* Assignee Information */}
-                  {respondModal.ticket.assigned_to_email ? (
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-                      <div className="flex items-center gap-2">
-                        <UserCheck className="h-4 w-4 text-blue-600" />
-                        <div>
-                          <p className="text-xs font-medium text-blue-900">
-                            Currently assigned to: {respondModal.ticket.assigned_to_email}
-                          </p>
-                          <p className="text-xs text-blue-700">
-                            Coordinate with this team member if needed
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-3 bg-orange-50 border border-orange-200 rounded-md">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 text-orange-600" />
-                        <div>
-                          <p className="text-xs font-medium text-orange-900">
-                            Unassigned ticket - Consider assigning it first
-                          </p>
-                          <p className="text-xs text-orange-700">
-                            You can assign this ticket to yourself after responding
-                          </p>
-                        </div>
-                      </div>
+                  {respondModal.ticket.assigned_to_email && (
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="h-4 w-4 text-blue-600" />
+                      <span className="text-xs text-blue-700">{respondModal.ticket.assigned_to_email}</span>
                     </div>
                   )}
-
-                  <div>
-                    <label className="text-sm font-medium text-gray-500 block mb-2">Your Response</label>
-                    <textarea
-                      className="w-full p-3 border rounded-md resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      rows={6}
-                      placeholder="Type your response here..."
-                      value={respondModal.response}
-                      onChange={(e) => setRespondModal({...respondModal, response: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="flex gap-3 pt-4">
-                    <Button onClick={handleSubmitResponse} disabled={!respondModal.response.trim()}>
-                      Send Response
-                    </Button>
-                    <Button variant="outline" onClick={() => setRespondModal(null)}>
-                      Cancel
-                    </Button>
-                  </div>
                 </div>
               )}
+            </div>
+
+            {/* Body - Two Column Layout */}
+            <div className="flex flex-1 overflow-hidden">
+              {/* Left Side - Conversation History */}
+              <div className="flex-1 border-r overflow-y-auto p-6">
+                <h4 className="font-semibold text-sm mb-4">Conversation</h4>
+                {ticketDetails?.responses && ticketDetails.responses.length > 0 ? (
+                  <div className="space-y-3">
+                    {ticketDetails.responses.map((response, index) => (
+                      <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="font-medium text-sm">{response.responder_email || 'Unknown'}</span>
+                          <span className="text-xs text-gray-500">{new Date(response.created_at).toLocaleString()}</span>
+                        </div>
+                        <p className="text-sm whitespace-pre-wrap">{response.response_text}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 italic">No responses yet</p>
+                )}
+              </div>
+
+              {/* Right Side - Response Form */}
+              <div className="w-150 bg-gray-50 p-6 overflow-y-auto flex flex-col">
+                <label className="text-sm font-medium text-gray-700 mb-3">Your Response</label>
+                <div className="flex-1 flex flex-col">
+                  <textarea
+                    className="flex-1 p-4 border rounded-md resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Type your response here..."
+                    value={respondModal.response}
+                    onChange={(e) => setRespondModal({...respondModal, response: e.target.value})}
+                  />
+                </div>
+
+                <div className="flex gap-2 mt-auto pt-4">
+                  <Button onClick={() => handleSubmitResponse(respondModal.ticket?.id, respondModal.response)} disabled={!respondModal.response.trim()} className="flex-1">
+                    Send Response
+                  </Button>
+                  <Button variant="outline" onClick={() => setRespondModal(null)}>
+                    Close
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
