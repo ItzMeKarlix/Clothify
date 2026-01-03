@@ -9,10 +9,13 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { authService, supabase } from '../../api/api';
 import toast from 'react-hot-toast';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useOnboarding } from '../../hooks/use-onboarding';
 
 const Settings: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { completeOnboarding } = useOnboarding();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -53,14 +56,7 @@ const Settings: React.FC = () => {
       await authService.updatePassword(newPassword);
 
       // Mark onboarding as completed
-      const { error: updateError } = await supabase
-        .from('user_roles')
-        .update({ onboarding_completed: true })
-        .eq('user_id', session.data.session.user.id);
-
-      if (updateError) {
-        console.warn('Failed to mark onboarding completed:', updateError);
-      }
+      await completeOnboarding();
 
       toast.success('Password updated successfully!');
       
@@ -69,9 +65,9 @@ const Settings: React.FC = () => {
       setNewPassword('');
       setConfirmPassword('');
 
-      // Reload page to refresh onboarding status
+      // Navigate to dashboard after successful password change
       setTimeout(() => {
-        window.location.reload();
+        navigate('/admin');
       }, 1500);
     } catch (err: any) {
       console.error('Password change error:', err);

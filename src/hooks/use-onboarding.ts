@@ -32,7 +32,15 @@ export const useOnboarding = () => {
         }
 
         // If onboarding_completed is false/null, user needs to complete onboarding
-        setNeedsOnboarding(!data?.onboarding_completed);
+        const shouldNeedOnboarding = !data?.onboarding_completed;
+        setNeedsOnboarding(shouldNeedOnboarding);
+        
+        // Store in localStorage to check for changes
+        if (shouldNeedOnboarding) {
+          localStorage.setItem('pendingOnboarding', 'true');
+        } else {
+          localStorage.removeItem('pendingOnboarding');
+        }
       } catch (err) {
         console.error('Onboarding check error:', err);
       } finally {
@@ -41,7 +49,34 @@ export const useOnboarding = () => {
     };
 
     checkOnboarding();
+
+    // Listen for storage changes (when onboarding is completed from another tab/window)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'pendingOnboarding' && !e.newValue) {
+        setNeedsOnboarding(false);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  return { needsOnboarding, loading, userEmail };
+  const completeOnboarding = async () => {
+    try {
+      const session = await supabase.auth.getSession();
+      if (!session.data.session?.user?.id) return;
+
+      await supabase
+        .from('user_roles')
+        .update({ onboarding_completed: true })
+        .eq('user_id', session.data.session.user.id);
+
+      setNeedsOnboarding(false);
+      localStorage.removeItem('pendingOnboarding');
+    } catch (err) {
+      console.error('Error completing onboarding:', err);
+    }
+  };
+
+  return { needsOnboarding, loading, userEmail, completeOnboarding };
 };

@@ -1,7 +1,7 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -10,8 +10,12 @@ interface OnboardingModalProps {
 
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, userEmail }) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  if (!isOpen) return null;
+  // Don't show modal on settings page
+  if (!isOpen || location.pathname === '/admin/settings') {
+    return null;
+  }
 
   const handleGoToSettings = () => {
     navigate('/admin/settings?tab=security');
