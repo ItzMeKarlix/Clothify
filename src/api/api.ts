@@ -583,14 +583,14 @@ export const storageService = {
   // Delete image from Supabase Storage
   async deleteImage(imageUrl: string): Promise<void> {
     // Extract file path from URL
-    const urlParts = imageUrl.split('/product-images/');
+    const urlParts = imageUrl.split('Image');
     if (urlParts.length < 2) return;
     
     const filePath = urlParts[1];
     if (!filePath) return;
     
     const { error } = await supabase.storage
-      .from('product-images')
+      .from('Image')
       .remove([filePath]);
 
     if (error) console.error('Error deleting image:', error);
