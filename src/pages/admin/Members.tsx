@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../api/api';
-import { Edit, Trash2, X, Mail, Shield, Eye, EyeOff, UserCheck, AlertTriangle, MessageSquare, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Edit, Trash2, X, Mail, Shield, Eye, EyeOff, UserCheck, AlertTriangle, MessageSquare } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
+import toast from 'react-hot-toast';
 
 interface Member {
   user_id: string;
-  role: string;
+  role: 'employee' | 'admin';
   role_assigned_at: string;
   email: string;
   user_created_at: string;
@@ -44,7 +45,6 @@ const Members: React.FC = () => {
   const [inviteRole, setInviteRole] = useState<'employee' | 'admin'>('employee');
   const [adminPassword, setAdminPassword] = useState('');
   const [otp, setOtp] = useState('');
-  const [expectedOtp, setExpectedOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -56,7 +56,6 @@ const Members: React.FC = () => {
   const [assignRole, setAssignRole] = useState<'employee' | 'admin'>('employee');
   const [assignPassword, setAssignPassword] = useState('');
   const [assignOtp, setAssignOtp] = useState('');
-  const [assignExpectedOtp, setAssignExpectedOtp] = useState('');
   const [assignOtpSent, setAssignOtpSent] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [showAssignPassword, setShowAssignPassword] = useState(false);
@@ -194,66 +193,108 @@ const Members: React.FC = () => {
     }
   };
 
-  const generateOTP = () => {
-    return Math.floor(100000 + Math.random() * 900000).toString();
-  };
-
   const sendOTP = async () => {
     if (otpTimer > 0) return; // Prevent sending if timer is active
 
-    if (!inviteEmail) {
-      alert('Please enter an email address');
-      return;
-    }
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !user.email) throw new Error('Admin email not found');
 
-    const otpCode = generateOTP();
-    setExpectedOtp(otpCode);
-    
-    // In production, send OTP via email service
-    // For now, showing in alert for demo purposes
-    alert(`OTP sent to admin email: ${otpCode}\n\nNote: In production, this would be sent via email service.`);
-    setOtpSent(true);
-    setOtpTimer(60); // Start 60 second timer
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/send-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`
+        },
+        body: JSON.stringify({ email: user.email })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send OTP');
+
+      toast.success('OTP sent to your admin email');
+      setOtpSent(true);
+      setOtpTimer(60);
+    } catch (err: any) {
+      console.error('Error sending OTP:', err);
+      toast.error(err.message || 'Failed to send OTP');
+    }
   };
 
   const sendAssignOTP = async () => {
     if (assignOtpTimer > 0) return; // Prevent sending if timer is active
 
-    const otpCode = generateOTP();
-    setAssignExpectedOtp(otpCode);
-    alert(`OTP sent to admin email: ${otpCode}\n\nNote: In production, this would be sent via email service.`);
-    setAssignOtpSent(true);
-    setAssignOtpTimer(60); // Start 60 second timer
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !user.email) throw new Error('Admin email not found');
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/send-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`
+        },
+        body: JSON.stringify({ email: user.email })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send OTP');
+
+      toast.success('OTP sent to your admin email');
+      setAssignOtpSent(true);
+      setAssignOtpTimer(60);
+    } catch (err: any) {
+      console.error('Error sending assign OTP:', err);
+      toast.error(err.message || 'Failed to send OTP');
+    }
   };
 
   const assignRoleToMember = async () => {
     if (!selectedUser || !assignPassword || !assignOtp) {
-      alert('Please fill in all fields');
-      return;
-    }
-
-    if (assignOtp !== assignExpectedOtp) {
-      alert('Invalid OTP');
+      toast.error('Please fill in all fields', { id: 'assign-fields' });
       return;
     }
 
     try {
       setAssigning(true);
-      
-      // First verify the admin's password by attempting to sign in
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) {
-        throw new Error('Not authenticated');
+
+      // Verify OTP via Supabase Edge Function
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !user.email) throw new Error('Admin email not found');
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const verifyRes = await fetch(`${supabaseUrl}/functions/v1/verify-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`
+        },
+        body: JSON.stringify({ email: user.email, code: assignOtp })
+      });
+
+      const verifyData = await verifyRes.json();
+      if (!verifyRes.ok) {
+        toast.error(verifyData.error || 'Invalid verification code', { id: 'assign-otp-invalid' });
+        return;
       }
 
       // Verify password by attempting sign in with current user
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user.user.email!,
+        email: user.email!,
         password: assignPassword,
       });
 
       if (signInError) {
-        throw new Error('Invalid password');
+        toast.error('Invalid password', { id: 'assign-invalid-password' });
+        return;
       }
 
       // Password verified, now update the user's role
@@ -269,21 +310,20 @@ const Members: React.FC = () => {
         throw new Error('Failed to update user role');
       }
 
-      alert(`Role updated successfully! ${selectedUser.email} is now ${assignRole === 'admin' ? 'an admin' : 'an employee'}.`);
+      toast.success(`Role updated successfully! ${selectedUser.email} is now ${assignRole === 'admin' ? 'an admin' : 'an employee'}.`);
       setShowAssignRoleModal(false);
       setSelectedUser(null);
       setAssignRole('employee');
       setAssignPassword('');
       setAssignOtp('');
-      setAssignExpectedOtp('');
       setAssignOtpSent(false);
-      
+
       // Refresh the members list
       fetchMembers();
-      
-    } catch (err) {
+
+    } catch (err: any) {
       console.error('Error assigning role:', err);
-      alert('Failed to assign role. Please check your password and try again.');
+      toast.error(err.message || 'Failed to assign role. Please try again.');
     } finally {
       setAssigning(false);
     }
@@ -291,7 +331,7 @@ const Members: React.FC = () => {
 
   const proceedToVerification = () => {
     if (!inviteEmail || !inviteEmail.includes('@')) {
-      alert('Please enter a valid email address');
+      toast.error('Please enter a valid email address', { id: 'invite-invalid-email' });
       return;
     }
     setInviteStep('verification');
@@ -301,77 +341,67 @@ const Members: React.FC = () => {
     setInviteStep('email');
     setAdminPassword('');
     setOtp('');
-    setExpectedOtp('');
     setOtpSent(false);
   };
 
   const verifyPasswordAndInvite = async () => {
     if (!inviteEmail || !adminPassword || !otp) {
-      alert('Please fill in all fields');
-      return;
-    }
-
-    if (otp !== expectedOtp) {
-      alert('Invalid OTP');
+      toast.error('Please fill in all fields', { id: 'invite-fields' });
       return;
     }
 
     try {
       setInviting(true);
-      
-      // First verify the admin's password by attempting to sign in
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) {
-        throw new Error('Not authenticated');
-      }
 
-      // Verify password by attempting sign in with current user
+      // Verify OTP via Supabase Edge Function
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !user.email) throw new Error('Admin email not found');
+
+      // Verify the admin's password by attempting to sign in
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user.user.email!,
+        email: user.email!,
         password: adminPassword,
       });
 
       if (signInError) {
-        throw new Error('Invalid password');
+        toast.error('Invalid password', { id: 'invite-invalid-password' });
+        return;
       }
 
-      // Password verified, now send invitation email via Supabase
-      // This automatically sends an email invitation to the user
-      const { data, error } = await supabase.auth.admin.inviteUserByEmail(inviteEmail);
-      
-      if (error) throw error;
+      // Password verified - call server-side function to verify OTP and send invite (uses service role key)
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-      // Add the user to user_roles table with selected role
-      if (data.user) {
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: data.user.id,
-            role: inviteRole
-          });
+      const res = await fetch(`${supabaseUrl}/functions/v1/invite-member`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`
+        },
+        body: JSON.stringify({ inviteEmail, role: inviteRole, adminEmail: user.email, code: otp })
+      });
 
-        if (roleError) {
-          console.error('Error assigning role:', roleError);
-          // Don't throw here as the invitation was successful
-        }
+      const inviteResult = await res.json();
+      if (!res.ok) {
+        toast.error(inviteResult.error || 'Failed to send invite', { id: 'invite-failed' });
+        return;
       }
 
-      alert(`Invitation email sent successfully to ${inviteEmail}!\n\nThey will receive an email with signup instructions.`);
+      toast.success(`Invitation email sent successfully to ${inviteEmail}!`);
       setShowInviteModal(false);
       setInviteStep('email');
       setInviteEmail('');
       setInviteRole('employee');
       setAdminPassword('');
       setOtp('');
-      setExpectedOtp('');
       setOtpSent(false);
-      
+
       // Refresh the members list
       fetchMembers();
-      
-    } catch (err) {
+
+    } catch (err: any) {
       console.error('Error inviting member:', err);
-      alert('Failed to invite member. Please check your password and try again.');
+      toast.error(err.message || 'Failed to invite member. Please try again.');
     } finally {
       setInviting(false);
     }
@@ -620,7 +650,6 @@ const Members: React.FC = () => {
                   setInviteRole('employee');
                   setAdminPassword('');
                   setOtp('');
-                  setExpectedOtp('');
                   setOtpSent(false);
                 }}
                 className="text-gray-400 hover:text-gray-600"
@@ -817,7 +846,6 @@ const Members: React.FC = () => {
                   setAssignRole('employee');
                   setAssignPassword('');
                   setAssignOtp('');
-                  setAssignExpectedOtp('');
                   setAssignOtpSent(false);
                 }}
                 className="text-gray-400 hover:text-gray-600"
@@ -935,7 +963,6 @@ const Members: React.FC = () => {
                   setAssignRole('employee');
                   setAssignPassword('');
                   setAssignOtp('');
-                  setAssignExpectedOtp('');
                   setAssignOtpSent(false);
                 }}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"

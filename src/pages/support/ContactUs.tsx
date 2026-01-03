@@ -89,11 +89,54 @@ const ContactUs: React.FC = () => {
     }
   };
 
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [newResponseText, setNewResponseText] = useState('');
+  const [responseSubmitting, setResponseSubmitting] = useState(false);
+
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (emailForTickets.trim()) {
       setEmailSubmitted(true);
       fetchTicketsByEmail(emailForTickets.trim());
+    }
+  };
+
+  const openTicketModal = async (ticket: SupportTicket) => {
+    setSelectedTicket(ticket);
+    setModalOpen(true);
+    // fetch fresh responses
+    try {
+      const responses = await supportTicketService.getResponses(ticket.id);
+      setSelectedTicket((prev) => prev ? { ...prev, responses } : { ...ticket, responses });
+    } catch (err) {
+      console.error('Failed to fetch responses:', err);
+    }
+  };
+
+  const closeTicketModal = () => {
+    setModalOpen(false);
+    setSelectedTicket(null);
+    setNewResponseText('');
+  };
+
+  const submitResponse = async () => {
+    if (!selectedTicket || !newResponseText.trim()) return;
+    setResponseSubmitting(true);
+    try {
+      // For anonymous customers, we don't have a responder_id - allow null in DB
+      await supportTicketService.addResponse({ ticket_id: selectedTicket.id, responder_id: '' as any, response_text: newResponseText.trim(), is_internal: false } as any);
+      // refresh responses
+      const responses = await supportTicketService.getResponses(selectedTicket.id);
+      setSelectedTicket((prev) => prev ? { ...prev, responses } : prev);
+      // Also update the tickets list if needed
+      setTickets((prev) => prev.map(t => t.id === selectedTicket.id ? { ...t, responses } : t));
+      setNewResponseText('');
+    } catch (err) {
+      console.error('Error adding response:', err);
+      setTicketsError('Failed to add response. Please try again.');
+    } finally {
+      setResponseSubmitting(false);
     }
   };
 
@@ -472,12 +515,7 @@ const ContactUs: React.FC = () => {
                     View My Tickets
                   </button>
                 </form>
-                <div className="mt-4 text-sm text-blue-600">
-                  <a href="/login" className="hover:underline">
-                    Sign in to your account
-                  </a>{' '}
-                  for easier access to your tickets.
-                </div>
+
               </div>
             </div>
           ) : (
@@ -572,11 +610,20 @@ const ContactUs: React.FC = () => {
                           <h4 className="text-lg font-medium text-gray-800 mb-2">
                             {ticket.subject}
                           </h4>
-                          {ticket.category_name && (
+                              {ticket.category_name && (
                             <p className="text-sm text-gray-600 mb-2">
                               Category: {ticket.category_name}
                             </p>
                           )}
+
+                          <div className="mt-4 flex gap-2">
+                            <button
+                              onClick={() => openTicketModal(ticket)}
+                              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+                            >
+                              View Details
+                            </button>
+                          </div>
                         </div>
                         <div className="flex gap-2">
                           <span className={`px-3 py-1 rounded-full text-sm font-medium ${getPriorityColor(ticket.priority)}`}>
@@ -594,24 +641,7 @@ const ContactUs: React.FC = () => {
                         </p>
                       </div>
 
-                      {/* Ticket responses */}
-                      {ticket.responses && ticket.responses.length > 0 && (
-                        <div className="space-y-3 mb-4">
-                          <h4 className="text-sm font-medium text-gray-700">Support Responses</h4>
-                          {ticket.responses.map((resp) => (
-                            <div key={resp.id} className="border-l-2 pl-3 py-2 bg-white rounded-md">
-                              <div className="text-xs text-gray-500 mb-1">
-                                <span className="font-medium text-gray-700">{resp.responder_email || 'Support Team'}</span>
-                                <span className="mx-2">•</span>
-                                <span>{new Date(resp.created_at).toLocaleString()}</span>
-                              </div>
-                              <div className="text-gray-700 text-sm whitespace-pre-line">
-                                {resp.response_text}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+
 
                       <div className="flex items-center justify-between text-sm text-gray-500">
                         <span>
@@ -639,6 +669,63 @@ const ContactUs: React.FC = () => {
                       )}
                     </div>
                   ))}
+
+                  {/* Ticket detail modal */}
+                  {modalOpen && selectedTicket && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center">
+                      <div className="absolute inset-0 bg-black/40" onClick={closeTicketModal} />
+                      <div className="bg-white rounded-lg shadow-lg max-w-3xl w-full mx-4 z-10 overflow-hidden">
+                        <div className="p-6 border-b border-gray-200 flex items-start justify-between">
+                          <div>
+                            <h3 className="text-xl font-semibold">Ticket #{selectedTicket.ticket_number} - {selectedTicket.subject}</h3>
+                            <p className="text-sm text-gray-500">Submitted: {new Date(selectedTicket.created_at).toLocaleString()}</p>
+                          </div>
+                          <div>
+                            <button onClick={closeTicketModal} className="text-gray-500 hover:text-black">Close</button>
+                          </div>
+                        </div>
+
+                        <div className="p-6">
+                          <div className="mb-4">
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">Details</h4>
+                            <div className="bg-gray-50 rounded p-4">
+                              <p className="text-gray-700 whitespace-pre-line">{selectedTicket.description}</p>
+                            </div>
+                          </div>
+
+                          <div className="mb-4">
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">Responses</h4>
+                            {selectedTicket.responses && selectedTicket.responses.length > 0 ? (
+                              <div className="space-y-3">
+                                {selectedTicket.responses.map((resp) => (
+                                  <div key={resp.id} className="border-l-2 pl-3 py-2 bg-white rounded-md">
+                                    <div className="text-xs text-gray-500 mb-1">
+                                      <span className="font-medium text-gray-700">{resp.responder_email || 'Support Team'}</span>
+                                      <span className="mx-2">•</span>
+                                      <span>{new Date(resp.created_at).toLocaleString()}</span>
+                                    </div>
+                                    <div className="text-gray-700 text-sm whitespace-pre-line">{resp.response_text}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-500">No responses yet.</p>
+                            )}
+                          </div>
+
+                          <div className="mb-4">
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">Add a response</h4>
+                            <textarea value={newResponseText} onChange={(e) => setNewResponseText(e.target.value)} className="w-full p-3 border border-gray-300 rounded-md" rows={4} />
+                            <div className="mt-3 flex justify-end">
+                              <button onClick={submitResponse} disabled={responseSubmitting} className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800 transition-colors">
+                                {responseSubmitting ? 'Sending...' : 'Send Reply'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </>
