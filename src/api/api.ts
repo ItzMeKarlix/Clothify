@@ -678,26 +678,20 @@ export const supportTicketService = {
     }
 
     // Get unique assigned user IDs
-    const assignedUserIds = [...new Set(tickets.map(t => t.assigned_to).filter(id => id))];
+    // const assignedUserIds = [...new Set(tickets.map(t => t.assigned_to).filter(id => id))];
 
     // Fetch user emails if we have assigned users
     let userEmails: { [key: string]: string } = {};
+    
+    // DISABLED: Querying user_roles causes 400 errors due to RLS/permissions
+    // For now, just use a default email or rely on client-side display
+    console.log('⚠️ Skipping user email queries in getTicketsForUser - RLS/permissions issue');
+    
+    /*
     if (assignedUserIds.length > 0) {
-      // Query user_details view instead of admin API
-      const { data: users, error: usersError } = await supabase
-        .from('user_details')
-        .select('user_id, email')
-        .in('user_id', assignedUserIds);
-
-      if (!usersError && users) {
-        // Create email map from the view data
-        users.forEach((user) => {
-          userEmails[user.user_id] = user.email || 'Unknown';
-        });
-      } else {
-        console.warn('⚠️ API: Could not fetch user emails from user_details view:', usersError);
-      }
+      // ... user_roles query code commented out ...
     }
+    */
 
     console.log('✅ API: Raw tickets from DB:', tickets);
     console.log('✅ API: User emails:', userEmails);
@@ -736,16 +730,42 @@ export const supportTicketService = {
     const ticketIds = tickets.map(t => t.id);
     const { data: responses, error: responsesError } = await supabase
       .from('ticket_responses')
-      .select('*, responder:responder_id(email)')
+      .select('*')
       .in('ticket_id', ticketIds)
       .order('created_at', { ascending: true });
 
     const responsesByTicket: { [key: number]: any[] } = {};
     if (!responsesError && responses) {
+      // Build mapping for any responders (fallback if responder_name not persisted)
+      // const responderIds = [...new Set(responses.map((r: any) => r.responder_id).filter((id: any) => id))];
+      let responderInfo: { [key: string]: { name?: string; email?: string | null } } = {};
+      
+      // DISABLED: Querying user_roles causes 400 errors due to RLS/permissions
+      // Once migrations are run and responder_name is persisted, this won't be needed
+      console.log('⚠️ Skipping user table queries in getMyTickets - using persisted/default names');
+      
+      /*
+      if (responderIds.length > 0) {
+        const isValidUUID = (id: any) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+        const validResponderIds = responderIds.filter(isValidUUID);
+        if (validResponderIds && validResponderIds.length > 0) {
+          // ... user_roles query code commented out ...
+        }
+      }
+      */
+
       responses.forEach((r: any) => {
+        let displayName = 'Support Team';
+        if (r.responder_name) {
+          displayName = r.responder_name;
+        } else if (r.responder_id === null) {
+          displayName = 'Customer';
+        }
+        
         const resp = {
           ...r,
-          responder_email: r.responder?.email || null
+          responder_email: r.responder_email || responderInfo[r.responder_id]?.email || null,
+          responder_name: displayName
         };
         const key = r.ticket_id as number;
         if (!responsesByTicket[key]) responsesByTicket[key] = [];
@@ -783,16 +803,37 @@ export const supportTicketService = {
 
     const { data: responses, error: responsesError } = await supabase
       .from('ticket_responses')
-      .select('*, responder:responder_id(email)')
+      .select('*')
       .in('ticket_id', ticketIds)
       .order('created_at', { ascending: true });
 
     const responsesByTicket: { [key: number]: any[] } = {};
     if (!responsesError && responses) {
+      // Fetch responder names (and emails) from user_details in bulk
+      // const responderIds = [...new Set(responses.map((r: any) => r.responder_id).filter((id: any) => id))];
+      let responderInfo: { [key: string]: { name?: string; email?: string | null } } = {};
+      
+      // DISABLED: Querying user_roles causes 400 errors due to RLS/permissions
+      console.log('⚠️ Skipping user table queries in getTicketsByEmail - using persisted/default names');
+      
+      /*
+      if (responderIds.length > 0) {
+        // ... user_roles query code commented out ...
+      }
+      */
+
       responses.forEach((r: any) => {
+        let displayName = 'Support Team';
+        if (r.responder_name) {
+          displayName = r.responder_name;
+        } else if (r.responder_id === null) {
+          displayName = 'Customer';
+        }
+        
         const resp = {
           ...r,
-          responder_email: r.responder?.email || null
+          responder_email: r.responder_email || responderInfo[r.responder_id]?.email || null,
+          responder_name: displayName
         };
         const key = r.ticket_id as number;
         if (!responsesByTicket[key]) responsesByTicket[key] = [];
@@ -824,14 +865,19 @@ export const supportTicketService = {
 
     if (error) throw error;
 
-    // Get the current user's email from user_details view
-    const { data: userInfo, error: userError } = await supabase
-      .from('user_details')
-      .select('email')
-      .eq('user_id', user.id)
-      .single();
+    // Get the current user's email from user_roles
+    let assignedEmail = null;
+    try {
+      const { data: userInfo, error: userError } = await supabase
+        .from('user_roles')
+        .select('email')
+        .eq('user_id', user.id)
+        .single();
 
-    const assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+      assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+    } catch (err) {
+      console.warn('⚠️ API: Could not fetch current user email from user_roles:', err);
+    }
 
     // Transform the data to match our interface
     return (data || []).map(ticket => ({
@@ -858,13 +904,17 @@ export const supportTicketService = {
     // Get the assigned user's email if assigned_to exists
     let assignedEmail = null;
     if (data.assigned_to) {
-      const { data: userInfo, error: userError } = await supabase
-        .from('user_details')
-        .select('email')
-        .eq('user_id', data.assigned_to)
-        .single();
+      try {
+        const { data: userInfo, error: userError } = await supabase
+          .from('user_roles')
+          .select('email')
+          .eq('user_id', data.assigned_to)
+          .single();
 
-      assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+        assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+      } catch (err) {
+        console.warn('⚠️ API: Could not fetch assigned user email from user_roles:', err);
+      }
     }
 
     return {
@@ -893,13 +943,17 @@ export const supportTicketService = {
     // Get the assigned user's email if assigned_to exists
     let assignedEmail = null;
     if (data.assigned_to) {
-      const { data: userInfo, error: userError } = await supabase
-        .from('user_details')
-        .select('email')
-        .eq('user_id', data.assigned_to)
-        .single();
+      try {
+        const { data: userInfo, error: userError } = await supabase
+          .from('user_roles')
+          .select('email')
+          .eq('user_id', data.assigned_to)
+          .single();
 
-      assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+        assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+      } catch (err) {
+        console.warn('⚠️ API: Could not fetch assigned user email from user_roles:', err);
+      }
     }
 
     return {
@@ -934,13 +988,17 @@ export const supportTicketService = {
     // Get the assigned user's email
     let assignedEmail = null;
     if (data.assigned_to) {
-      const { data: userInfo, error: userError } = await supabase
-        .from('user_details')
-        .select('email')
-        .eq('user_id', data.assigned_to)
-        .single();
+      try {
+        const { data: userInfo, error: userError } = await supabase
+          .from('user_roles')
+          .select('email')
+          .eq('user_id', data.assigned_to)
+          .single();
 
-      assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+        assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+      } catch (err) {
+        console.warn('⚠️ API: Could not fetch assigned user email from user_roles:', err);
+      }
     }
 
     return {
@@ -975,13 +1033,17 @@ export const supportTicketService = {
     // Get the assigned user's email if assigned_to exists
     let assignedEmail = null;
     if (data.assigned_to) {
-      const { data: userInfo, error: userError } = await supabase
-        .from('user_details')
-        .select('email')
-        .eq('user_id', data.assigned_to)
-        .single();
+      try {
+        const { data: userInfo, error: userError } = await supabase
+          .from('user_roles')
+          .select('email')
+          .eq('user_id', data.assigned_to)
+          .single();
 
-      assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+        assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+      } catch (err) {
+        console.warn('⚠️ API: Could not fetch assigned user email from user_roles:', err);
+      }
     }
 
     return {
@@ -1021,13 +1083,17 @@ export const supportTicketService = {
     // Get the assigned user's email if assigned_to exists
     let assignedEmail = null;
     if (data.assigned_to) {
-      const { data: userInfo, error: userError } = await supabase
-        .from('user_details')
-        .select('email')
-        .eq('user_id', data.assigned_to)
-        .single();
+      try {
+        const { data: userInfo, error: userError } = await supabase
+          .from('user_roles')
+          .select('email')
+          .eq('user_id', data.assigned_to)
+          .single();
 
-      assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+        assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+      } catch (err) {
+        console.warn('⚠️ API: Could not fetch assigned user email from user_roles:', err);
+      }
     }
 
     return {
@@ -1054,28 +1120,37 @@ export const supportTicketService = {
 
     // Fetch responder names from user_roles table
     let responderInfo: { [key: string]: { email: string; name: string } } = {};
-    if (responderIds.length > 0) {
-      const { data: users, error: usersError } = await supabase
-        .from('user_roles')
-        .select('user_id, name')
-        .in('user_id', responderIds);
+    
+    // For now, skip querying user tables since they're causing 400 errors
+    // Just use persisted responder_name from the response or fallback to defaults
+    // TODO: Once migrations are run and responder_name column exists, this will work automatically
+    console.log('🔍 DEBUG getResponses: responderIds=', responderIds);
+    console.log('⚠️ Skipping user table queries due to RLS/permissions issues - using persisted names only');
 
-      if (!usersError && users) {
-        users.forEach(user => {
-          responderInfo[user.user_id] = {
-            email: user.user_id,
-            name: user.name || 'Unknown'
-          };
-        });
+    // Combine the data - prefer persisted responder_name/responder_email when present
+    // If responder_name doesn't exist (migrations not run), fall back to meaningful defaults
+    return (responses || []).map(response => {
+      let displayName = 'Support Team';
+      
+      // Prefer persisted name
+      if (response.responder_name) {
+        displayName = response.responder_name;
       }
-    }
-
-    // Combine the data
-    return (responses || []).map(response => ({
-      ...response,
-      responder_email: responderInfo[response.responder_id]?.email || null,
-      responder_name: responderInfo[response.responder_id]?.name || 'Unknown'
-    }));
+      // If no responder_id, it's an anonymous customer reply
+      else if (response.responder_id === null) {
+        displayName = 'Customer';
+      }
+      // If we have responder info from the (now disabled) user query
+      else if (responderInfo[response.responder_id]?.name) {
+        displayName = responderInfo[response.responder_id]!.name;
+      }
+      
+      return {
+        ...response,
+        responder_email: response.responder_email || responderInfo[response.responder_id]?.email || null,
+        responder_name: displayName
+      };
+    });
   },
 
   // Add a response to a ticket
@@ -1084,13 +1159,32 @@ export const supportTicketService = {
     
     // Validate data
     if (!responseData.ticket_id) throw new Error('ticket_id is required');
-    if (!responseData.responder_id) throw new Error('responder_id is required');
     if (!responseData.response_text) throw new Error('response_text is required');
 
-    // Ensure ticket_id is a number
-    const dataToInsert = {
+    // Ensure ticket_id is a number and allow responder_id to be null (anonymous customer)
+    // Determine responder_name to persist so public reads don't require joins
+    let responderName: string | null = null;
+    if (responseData.responder_id) {
+      const { data: userInfo, error: userError } = await supabase
+        .from('user_roles')
+        .select('name')
+        .eq('user_id', responseData.responder_id)
+        .single();
+      if (!userError && userInfo) responderName = userInfo.name || null;
+    } else {
+      // Anonymous response - pull customer name from ticket if available
+      const { data: ticketInfo, error: ticketErr } = await supabase
+        .from('support_tickets')
+        .select('customer_name')
+        .eq('id', responseData.ticket_id)
+        .single();
+      if (!ticketErr && ticketInfo) responderName = ticketInfo.customer_name || null;
+    }
+
+    const dataToInsert: any = {
       ticket_id: Number(responseData.ticket_id),
-      responder_id: responseData.responder_id,
+      responder_id: responseData.responder_id || null,
+      responder_name: responderName,
       response_text: responseData.response_text,
       is_internal: responseData.is_internal || false,
       created_at: new Date().toISOString()
@@ -1113,25 +1207,31 @@ export const supportTicketService = {
 
     console.log('✅ API: Response added successfully:', data);
 
-    // Fetch responder name from user_roles table
+    // Prepare responder email and name for return. `responderName` may have been determined earlier before insert.
     let responderEmail = null;
-    let responderName = null;
-    if (data.responder_id) {
-      const { data: userInfo, error: userError } = await supabase
-        .from('user_roles')
-        .select('name')
-        .eq('user_id', data.responder_id)
-        .single();
 
-      if (!userError && userInfo) {
-        responderName = userInfo.name || 'Unknown';
+    if (data.responder_id) {
+      // Try to fetch email/name from user_roles as a best-effort
+      try {
+        const { data: userInfo, error: userError } = await supabase
+          .from('user_roles')
+          .select('name, email')
+          .eq('user_id', data.responder_id)
+          .single();
+        if (!userError && userInfo) {
+          responderEmail = userInfo.email || null;
+          // Only overwrite responderName if it wasn't set earlier or is null
+          if (!responderName) responderName = userInfo.name || 'Unknown';
+        }
+      } catch (err) {
+        // ignore - best effort
       }
     }
 
     return {
       ...data,
       responder_email: responderEmail,
-      responder_name: responderName
+      responder_name: responderName || 'Unknown'
     };
   },
 
@@ -1150,19 +1250,23 @@ export const supportTicketService = {
     if (ticketError) throw ticketError;
     if (!ticket) return { ticket: null, responses: [] };
 
-    // Get the responses
+    // Get the responses (these will include responder_name persisted at insert time when available)
     const responses = await this.getResponses(ticketId);
 
     // Get assigned user email if needed
     let assignedEmail = null;
     if (ticket.assigned_to) {
-      const { data: userInfo, error: userError } = await supabase
-        .from('user_details')
-        .select('email')
-        .eq('user_id', ticket.assigned_to)
-        .single();
+      try {
+        const { data: userInfo, error: userError } = await supabase
+          .from('user_roles')
+          .select('email')
+          .eq('user_id', ticket.assigned_to)
+          .single();
 
-      assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+        assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+      } catch (err) {
+        console.warn('⚠️ API: Could not fetch assigned user email from user_roles:', err);
+      }
     }
 
     const transformedTicket: SupportTicket = {

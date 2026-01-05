@@ -19,7 +19,6 @@ const ContactUs: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState<'submit' | 'view'>('submit');
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [ticketsLoading, setTicketsLoading] = useState(false);
@@ -29,21 +28,14 @@ const ContactUs: React.FC = () => {
 
   useEffect(() => {
     fetchCategories();
-    checkAuthentication();
   }, []);
 
   useEffect(() => {
     if (activeTab === 'view') {
-      if (isAuthenticated) {
-        fetchMyTickets();
-      } else {
-        // Reset email submission when viewing for non-authenticated users
-        console.log('Resetting email form - emailSubmitted:', emailSubmitted, 'isAuthenticated:', isAuthenticated);
-        setEmailSubmitted(false);
-        // Don't clear tickets here - let the render logic show the form instead
-      }
+      // Reset email submission when switching to view tab
+      setEmailSubmitted(false);
     }
-  }, [isAuthenticated, activeTab]);
+  }, [activeTab]);
 
   const fetchCategories = async () => {
     try {
@@ -54,21 +46,7 @@ const ContactUs: React.FC = () => {
     }
   };
 
-  const checkAuthentication = async () => {
-    try {
-      const session = await authService.getCurrentSession();
-      setIsAuthenticated(!!session);
-      if (session?.user?.email) {
-        setFormData(prev => ({
-          ...prev,
-          email: session.user.email || ''
-        }));
-        setEmailForTickets(session.user.email || '');
-      }
-    } catch (error) {
-      console.error('Error checking authentication:', error);
-    }
-  };
+
 
   const fetchMyTickets = async () => {
     try {
@@ -132,7 +110,7 @@ const ContactUs: React.FC = () => {
     setResponseSubmitting(true);
     try {
       // For anonymous customers, we don't have a responder_id - allow null in DB
-      await supportTicketService.addResponse({ ticket_id: selectedTicket.id, responder_id: '' as any, response_text: newResponseText.trim(), is_internal: false } as any);
+      await supportTicketService.addResponse({ ticket_id: selectedTicket.id, responder_id: null, response_text: newResponseText.trim(), is_internal: false } as any);
       // refresh responses
       const responses = await supportTicketService.getResponses(selectedTicket.id);
       setSelectedTicket((prev) => prev ? { ...prev, responses } : prev);
@@ -229,22 +207,10 @@ const ContactUs: React.FC = () => {
     setSubmitError(null);
 
     try {
-      // Get user info if authenticated
+      // Customer info (always derived from the submitted form for public contact page)
       let customerId: string | null = null;
       let customerEmail = formData.email;
       let customerName = `${formData.firstName} ${formData.lastName}`.trim();
-
-      if (isAuthenticated) {
-        try {
-          const user = await authService.getCurrentUser();
-          if (user) {
-            customerId = user.id;
-            customerEmail = user.email || formData.email;
-          }
-        } catch (authError) {
-          console.warn('Auth check failed, proceeding as anonymous:', authError);
-        }
-      }
 
       // Prepare ticket data - keep it simple
       const ticketData = {
@@ -296,7 +262,7 @@ const ContactUs: React.FC = () => {
       // Auto-switch to view tab so user can immediately see their ticket(s)
       setActiveTab('view');
       setEmailSubmitted(true);
-      if (!isAuthenticated && customerEmail) {
+      if (customerEmail) {
         // fetch tickets for the provided email
         await fetchTicketsByEmail(customerEmail);
       }
@@ -304,7 +270,7 @@ const ContactUs: React.FC = () => {
       setFormData({
         firstName: '',
         lastName: '',
-        email: isAuthenticated ? customerEmail : '',
+        email: '',
         phone: '',
         orderNumber: '',
         subject: 'General Inquiry',
@@ -498,8 +464,8 @@ const ContactUs: React.FC = () => {
             <div className="text-center py-8">
               <p className="text-gray-600">Loading your support tickets...</p>
             </div>
-          ) : !emailSubmitted && !isAuthenticated ? (
-            // Show email entry form for unauthenticated users who haven't submitted an email yet
+          ) : !emailSubmitted ? (
+            // Show email entry form if email hasn't been submitted yet (for all users)
             <div className="text-center py-8">
               <div className="bg-blue-50 border border-blue-200 rounded-md p-6 max-w-md mx-auto">
                 <MessageSquare className="h-12 w-12 text-blue-500 mx-auto mb-4" />
@@ -526,7 +492,7 @@ const ContactUs: React.FC = () => {
               </div>
             </div>
           ) : (
-            // Show tickets or no tickets message
+            // Show tickets or no tickets message after email is submitted
             <>
               {ticketsError && (
                 <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
@@ -575,7 +541,7 @@ const ContactUs: React.FC = () => {
                       You have {tickets.length} support ticket{tickets.length !== 1 ? 's' : ''}
                     </p>
                     <button
-                      onClick={isAuthenticated ? fetchMyTickets : () => fetchTicketsByEmail(emailForTickets)}
+                      onClick={() => fetchTicketsByEmail(emailForTickets)}
                       className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 transition-colors"
                     >
                       Refresh
@@ -657,10 +623,10 @@ const ContactUs: React.FC = () => {
 
                   {/* Ticket detail modal */}
                   {modalOpen && selectedTicket && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                       <div className="absolute inset-0 bg-black/40" onClick={closeTicketModal} />
-                      <div className="bg-white rounded-lg shadow-lg max-w-3xl w-full mx-4 z-10 overflow-hidden">
-                        <div className="p-6 border-b border-gray-200 flex items-start justify-between">
+                      <div className="bg-white rounded-lg shadow-lg w-full max-w-6xl h-[85vh] z-10 overflow-hidden flex flex-col">
+                        <div className="p-6 border-b border-gray-200 flex items-start justify-between flex-shrink-0">
                           <div>
                             <h3 className="text-xl font-semibold">Ticket #{selectedTicket.ticket_number} - {selectedTicket.subject}</h3>
                             <p className="text-sm text-gray-500">Submitted: {new Date(selectedTicket.created_at).toLocaleString()}</p>
@@ -670,41 +636,60 @@ const ContactUs: React.FC = () => {
                           </div>
                         </div>
 
-                        <div className="p-6">
-                          <div className="mb-4">
-                            <h4 className="text-sm font-medium text-gray-700 mb-2">Details</h4>
-                            <div className="bg-gray-50 rounded p-4">
-                              <p className="text-gray-700 whitespace-pre-line">{selectedTicket.description}</p>
-                            </div>
-                          </div>
-
-                          <div className="mb-4">
-                            <h4 className="text-sm font-medium text-gray-700 mb-2">Responses</h4>
-                            {selectedTicket.responses && selectedTicket.responses.length > 0 ? (
-                              <div className="space-y-3">
-                                {selectedTicket.responses.map((resp) => (
-                                  <div key={resp.id} className="border-l-2 pl-3 py-2 bg-white rounded-md">
-                                    <div className="text-xs text-gray-500 mb-1">
-                                      <span className="font-medium text-gray-700">{resp.responder_email || 'Support Team'}</span>
-                                      <span className="mx-2">•</span>
-                                      <span>{new Date(resp.created_at).toLocaleString()}</span>
-                                    </div>
-                                    <div className="text-gray-700 text-sm whitespace-pre-line">{resp.response_text}</div>
-                                  </div>
-                                ))}
+                        <div className="p-6 flex-1 overflow-hidden">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
+                            {/* Left Column - Conversation */}
+                            <div className="space-y-4 flex flex-col h-full">
+                              <div className="flex-shrink-0">
+                                <h4 className="text-sm font-medium text-gray-700 mb-2">Details</h4>
+                                <div className="bg-gray-50 rounded p-4">
+                                  <p className="text-gray-700 whitespace-pre-line">{selectedTicket.description}</p>
+                                </div>
                               </div>
-                            ) : (
-                              <p className="text-sm text-gray-500">No responses yet.</p>
-                            )}
-                          </div>
 
-                          <div className="mb-4">
-                            <h4 className="text-sm font-medium text-gray-700 mb-2">Add a response</h4>
-                            <textarea value={newResponseText} onChange={(e) => setNewResponseText(e.target.value)} className="w-full p-3 border border-gray-300 rounded-md" rows={4} />
-                            <div className="mt-3 flex justify-end">
-                              <button onClick={submitResponse} disabled={responseSubmitting} className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800 transition-colors">
-                                {responseSubmitting ? 'Sending...' : 'Send Reply'}
-                              </button>
+                              <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                                <h4 className="text-sm font-medium text-gray-700 mb-2 flex-shrink-0">Responses</h4>
+                                <div className="flex-1 overflow-y-auto pr-2">
+                                  {selectedTicket.responses && selectedTicket.responses.length > 0 ? (
+                                    <div className="space-y-3">
+                                      {selectedTicket.responses.map((resp) => (
+                                        <div key={resp.id} className="border-l-2 border-blue-500 pl-3 py-2 bg-white rounded-md shadow-sm">
+                                          <div className="text-xs text-gray-500 mb-1">
+                                            <span className="font-medium text-gray-700">{resp.responder_name || resp.responder_email || (resp.responder_id === null ? (selectedTicket.customer_name || 'You') : 'Support Team')}</span>
+                                            <span className="mx-2">•</span>
+                                            <span>{new Date(resp.created_at).toLocaleString()}</span>
+                                          </div>
+                                          <div className="text-gray-700 text-sm whitespace-pre-line">{resp.response_text}</div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-gray-500">No responses yet.</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Right Column - Reply Box */}
+                            <div className="md:border-l md:border-gray-200 md:pl-6 flex flex-col h-full">
+                              <h4 className="text-sm font-medium text-gray-700 mb-2 flex-shrink-0">Add a response</h4>
+                              <div className="flex flex-col flex-1">
+                                <textarea 
+                                  value={newResponseText} 
+                                  onChange={(e) => setNewResponseText(e.target.value)} 
+                                  className="w-full p-3 border border-gray-300 rounded-md flex-1 resize-none" 
+                                  placeholder="Type your message here..."
+                                />
+                                <div className="mt-4 flex justify-end flex-shrink-0">
+                                  <button 
+                                    onClick={submitResponse} 
+                                    disabled={responseSubmitting || !newResponseText.trim()} 
+                                    className="bg-black text-white px-6 py-2.5 rounded hover:bg-gray-800 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                  >
+                                    {responseSubmitting ? 'Sending...' : 'Send Reply'}
+                                  </button>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>

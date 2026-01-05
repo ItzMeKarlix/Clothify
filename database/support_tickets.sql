@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS support_tickets (
 CREATE TABLE IF NOT EXISTS ticket_responses (
     id SERIAL PRIMARY KEY,
     ticket_id INTEGER NOT NULL REFERENCES support_tickets(id) ON DELETE CASCADE,
-    responder_id UUID NOT NULL, -- REFERENCES auth.users(id) ON DELETE CASCADE,
+    responder_id UUID, -- REFERENCES auth.users(id) ON DELETE CASCADE, -- allow NULL for anonymous responses
     response_text TEXT NOT NULL,
     is_internal BOOLEAN DEFAULT FALSE, -- internal notes not visible to customer
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

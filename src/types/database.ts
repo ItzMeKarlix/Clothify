@@ -240,19 +240,19 @@ export interface SupportTicketUpdate {
 export interface TicketResponse {
   id: number;
   ticket_id: number;
-  responder_id: string;
+  responder_id: string | null;
   response_text: string;
   is_internal: boolean;
   created_at: string;
   updated_at: string;
   // Joined data
-  responder_email?: string;
+  responder_email?: string | null;
   responder_name?: string;
 }
 
 export interface TicketResponseInsert {
   ticket_id: number;
-  responder_id: string;
+  responder_id?: string | null;
   response_text: string;
   is_internal?: boolean;
 }
