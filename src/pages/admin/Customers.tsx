@@ -782,130 +782,147 @@ const Customers: React.FC = () => {
       {/* Ticket Details Modal */}
       {ticketDetails ? (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <MessageSquare className="h-6 w-6 text-blue-500" />
-                  <h3 className="text-xl font-semibold">Ticket Details</h3>
-                </div>
-                <button
-                  onClick={() => setTicketDetails(null)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <XCircle className="h-6 w-6" />
-                </button>
+          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full mx-4 h-[85vh] z-10 overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-gray-200 flex items-start justify-between flex-shrink-0">
+              <div>
+                <h3 className="text-xl font-semibold">Ticket #{ticketDetails.ticket?.ticket_number} - {ticketDetails.ticket?.subject}</h3>
+                <p className="text-sm text-gray-500">Customer: {ticketDetails.ticket?.customer_email}</p>
               </div>
+              <button
+                onClick={() => setTicketDetails(null)}
+                className="text-gray-500 hover:text-black"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
 
-              {ticketDetails.ticket && (
-                <div className="space-y-6">
-                  {/* Ticket Info */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Subject</label>
-                        <p className="text-sm font-medium">{ticketDetails.ticket.subject}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Ticket Number</label>
-                        <p className="text-sm">#{ticketDetails.ticket.ticket_number}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Customer</label>
-                        <p className="text-sm">{ticketDetails.ticket.customer_email}</p>
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Status</label>
-                        <Badge variant={
-                          ticketDetails.ticket.status === 'open' ? 'destructive' :
-                          ticketDetails.ticket.status === 'in-progress' ? 'default' :
-                          ticketDetails.ticket.status === 'resolved' ? 'secondary' :
-                          'outline'
-                        }>
-                          {ticketDetails.ticket.status.replace('-', ' ')}
-                        </Badge>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Priority</label>
-                        <Badge variant="outline" className="text-xs">
-                          {ticketDetails.ticket.priority.toUpperCase()}
-                        </Badge>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Created</label>
-                        <p className="text-sm">{new Date(ticketDetails.ticket.created_at).toLocaleString()}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Assignee Information */}
-                  <div className="border-t pt-4">
-                    <label className="text-sm font-medium text-gray-500 block mb-3">Assignment Details</label>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      {ticketDetails.ticket.assigned_to ? (
-                        <div className="flex items-center gap-3">
-                          <UserCheck className="h-5 w-5 text-blue-600" />
-                          <div>
-                            <p className="text-sm font-medium text-blue-900">
-                              Assigned to: {ticketDetails.ticket.assigned_to_email || 'Unknown Employee'}
-                            </p>
-                            <p className="text-xs text-blue-700">
-                              This ticket is currently being handled by a support team member
-                            </p>
-                          </div>
+            {ticketDetails.ticket && (
+              <div className="p-6 flex-1 overflow-hidden">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
+                  {/* Left Column - Conversation */}
+                  <div className="flex flex-col h-full min-h-0">
+                    <div className="flex-shrink-0">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">Details</h4>
+                      <div className="bg-gray-50 rounded p-4 space-y-3">
+                        <div>
+                          <label className="text-xs font-medium text-gray-500">Status</label>
+                          <Badge variant={
+                            ticketDetails.ticket.status === 'open' ? 'destructive' :
+                            ticketDetails.ticket.status === 'in-progress' ? 'default' :
+                            ticketDetails.ticket.status === 'resolved' ? 'secondary' :
+                            'outline'
+                          }>
+                            {ticketDetails.ticket.status.replace('-', ' ')}
+                          </Badge>
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          <AlertTriangle className="h-5 w-5 text-orange-600" />
-                          <div>
-                            <p className="text-sm font-medium text-orange-900">
-                              Unassigned Ticket
-                            </p>
-                            <p className="text-xs text-orange-700">
-                              This ticket is available for assignment and needs attention
-                            </p>
-                          </div>
+                        <div>
+                          <label className="text-xs font-medium text-gray-500">Priority</label>
+                          <Badge variant="outline" className="text-xs">
+                            {ticketDetails.ticket.priority.toUpperCase()}
+                          </Badge>
                         </div>
-                      )}
+                        <div>
+                          <label className="text-xs font-medium text-gray-500">Created</label>
+                          <p className="text-xs">{new Date(ticketDetails.ticket.created_at).toLocaleString()}</p>
+                        </div>
+                        <div className="border-t pt-3">
+                          <p className="text-sm whitespace-pre-line text-gray-700">{ticketDetails.ticket.description}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 overflow-hidden flex flex-col min-h-0 mt-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2 flex-shrink-0">Responses</h4>
+                      <div className="flex-1 overflow-y-auto pr-4 border border-gray-200 rounded bg-gradient-to-b from-white to-gray-50 p-3">
+                        {ticketDetails.responses.length > 0 ? (
+                          <div className="space-y-3">
+                            {ticketDetails.responses.map((response, index) => {
+                              const isCurrentUser = response.responder_id === currentUserId;
+                              const responderName = isCurrentUser ? 'You' : (response.responder_name || response.responder_email || 'Unknown');
+                              return (
+                                <div key={index} className="border-l-2 border-blue-500 pl-3 py-2 bg-white rounded-md shadow-sm">
+                                  <div className="text-xs text-gray-500 mb-1">
+                                    <span className={`font-medium ${isCurrentUser ? 'text-blue-600' : 'text-red-600'}`}>
+                                      {responderName}
+                                    </span>
+                                    <span className="mx-2">•</span>
+                                    <span>{new Date(response.created_at).toLocaleString()}</span>
+                                  </div>
+                                  <div className="text-gray-700 text-sm whitespace-pre-line">{response.response_text}</div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500">No responses yet.</p>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Description */}
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Description</label>
-                    <div className="mt-1 p-3 bg-gray-50 rounded-md">
-                      <p className="text-sm whitespace-pre-wrap">{ticketDetails.ticket.description}</p>
-                    </div>
-                  </div>
-
-                  {/* Responses */}
-                  <div>
-                    <h4 className="font-medium mb-3">Responses ({ticketDetails.responses.length})</h4>
-                    {ticketDetails.responses.length > 0 ? (
-                      <div className="space-y-3 max-h-96 overflow-y-auto">
-                        {ticketDetails.responses.map((response, index) => {
-                          const isCurrentUser = response.responder_id === currentUserId;
-                          const responderName = isCurrentUser ? 'You' : (response.responder_name || response.responder_email || 'Unknown');
-                          return (
-                            <div key={index} className="border rounded-lg p-4 bg-gray-50">
-                              <div className="flex justify-between items-start mb-2">
-                                <span className={`font-medium text-sm ${isCurrentUser ? 'text-blue-600' : 'text-red-600'}`}>{responderName}</span>
-                                <span className="text-xs text-gray-500">{new Date(response.created_at).toLocaleString()}</span>
+                  {/* Right Column - Assignment & Quick Actions */}
+                  <div className="md:border-l md:border-gray-200 md:pl-6 flex flex-col h-full">
+                    <div className="flex-1 overflow-y-auto">
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 block mb-3">Assignment</label>
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            {ticketDetails.ticket.assigned_to ? (
+                              <div className="flex items-center gap-3">
+                                <UserCheck className="h-5 w-5 text-blue-600" />
+                                <div>
+                                  <p className="text-sm font-medium text-blue-900">
+                                    Assigned to: {ticketDetails.ticket.assigned_to_email || 'Unknown Employee'}
+                                  </p>
+                                </div>
                               </div>
-                              <p className="text-sm whitespace-pre-wrap">{response.response_text}</p>
-                            </div>
-                          );
-                        })}
+                            ) : (
+                              <div className="flex items-center gap-3">
+                                <AlertTriangle className="h-5 w-5 text-orange-600" />
+                                <div>
+                                  <p className="text-sm font-medium text-orange-900">
+                                    Unassigned Ticket
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setRespondModal({
+                                ticket: ticketDetails.ticket,
+                                response: '',
+                                responses: ticketDetails.responses
+                              });
+                              setTicketDetails(null);
+                            }}
+                            className="w-full"
+                          >
+                            <MessageSquare className="w-4 h-4 mr-1" />
+                            Respond
+                          </Button>
+                        </div>
+                        <div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleMarkResolved(ticketDetails.ticket!)}
+                            className="w-full"
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Resolve
+                          </Button>
+                        </div>
                       </div>
-                    ) : (
-                      <p className="text-sm text-gray-500 italic">No responses yet</p>
-                    )}
+                    </div>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       ) : null}
@@ -948,7 +965,7 @@ const Customers: React.FC = () => {
             {/* Body - Two Column Layout */}
             <div className="flex flex-1 overflow-hidden">
               {/* Left Side - Conversation History */}
-              <div className="flex-1 border-r overflow-y-auto p-6">
+              <div className="flex-1 border-r overflow-y-auto p-6 bg-gradient-to-b from-white to-gray-50">
                 <h4 className="font-semibold text-sm mb-4">Conversation</h4>
                 {respondModal?.responses && respondModal.responses.length > 0 ? (
                   <div className="space-y-3">

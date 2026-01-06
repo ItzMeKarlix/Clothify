@@ -639,7 +639,7 @@ const ContactUs: React.FC = () => {
                         <div className="p-6 flex-1 overflow-hidden">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
                             {/* Left Column - Conversation */}
-                            <div className="space-y-4 flex flex-col h-full">
+                            <div className="flex flex-col h-full min-h-0">
                               <div className="flex-shrink-0">
                                 <h4 className="text-sm font-medium text-gray-700 mb-2">Details</h4>
                                 <div className="bg-gray-50 rounded p-4">
@@ -647,9 +647,9 @@ const ContactUs: React.FC = () => {
                                 </div>
                               </div>
 
-                              <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                              <div className="flex-1 overflow-hidden flex flex-col min-h-0 mt-4">
                                 <h4 className="text-sm font-medium text-gray-700 mb-2 flex-shrink-0">Responses</h4>
-                                <div className="flex-1 overflow-y-auto pr-2">
+                                <div className="flex-1 overflow-y-auto pr-4 border border-gray-200 rounded bg-gradient-to-b from-white to-gray-50 p-3">
                                   {selectedTicket.responses && selectedTicket.responses.length > 0 ? (
                                     <div className="space-y-3">
                                       {selectedTicket.responses.map((resp) => {
