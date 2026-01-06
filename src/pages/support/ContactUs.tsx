@@ -605,9 +605,9 @@ const ContactUs: React.FC = () => {
                         </span>
                       </div>
 
-                      {ticket.assigned_to_email && (
+                      {ticket.assigned_to && (
                         <div className="mt-3 text-sm text-gray-600">
-                          Assigned to: {ticket.assigned_to_email}
+                          Assigned to: {ticket.assigned_to_email || 'Support Team'}
                         </div>
                       )}
 

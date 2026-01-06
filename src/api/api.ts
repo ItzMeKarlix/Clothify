@@ -865,19 +865,20 @@ export const supportTicketService = {
 
     if (error) throw error;
 
-    // Get the current user's email from user_roles
-    let assignedEmail = null;
-    try {
-      const { data: userInfo, error: userError } = await supabase
-        .from('user_roles')
-        .select('email')
-        .eq('user_id', user.id)
-        .single();
-
-      assignedEmail = (!userError && userInfo) ? userInfo.email : null;
-    } catch (err) {
-      console.warn('⚠️ API: Could not fetch current user email from user_roles:', err);
-    }
+    // DISABLED: user_roles queries cause 400 errors due to RLS policies
+    // let assignedEmail = null;
+    // try {
+    //   const { data: userInfo, error: userError } = await supabase
+    //     .from('user_roles')
+    //     .select('email')
+    //     .eq('user_id', user.id)
+    //     .single();
+    //
+    //   assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+    // } catch (err) {
+    //   console.warn('⚠️ API: Could not fetch current user email from user_roles:', err);
+    // }
+    const assignedEmail = null; // Temporarily disabled due to RLS issues
 
     // Transform the data to match our interface
     return (data || []).map(ticket => ({
@@ -986,20 +987,22 @@ export const supportTicketService = {
     if (!data) throw new Error('Failed to assign ticket');
 
     // Get the assigned user's email
-    let assignedEmail = null;
-    if (data.assigned_to) {
-      try {
-        const { data: userInfo, error: userError } = await supabase
-          .from('user_roles')
-          .select('email')
-          .eq('user_id', data.assigned_to)
-          .single();
-
-        assignedEmail = (!userError && userInfo) ? userInfo.email : null;
-      } catch (err) {
-        console.warn('⚠️ API: Could not fetch assigned user email from user_roles:', err);
-      }
-    }
+    // DISABLED: user_roles queries cause 400 errors due to RLS policies
+    // let assignedEmail = null;
+    // if (data.assigned_to) {
+    //   try {
+    //     const { data: userInfo, error: userError } = await supabase
+    //       .from('user_roles')
+    //       .select('email')
+    //       .eq('user_id', data.assigned_to)
+    //       .single();
+    //
+    //     assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+    //   } catch (err) {
+    //     console.warn('⚠️ API: Could not fetch assigned user email from user_roles:', err);
+    //   }
+    // }
+    const assignedEmail = null; // Temporarily disabled due to RLS issues
 
     return {
       ...data,
@@ -1031,20 +1034,22 @@ export const supportTicketService = {
     if (!data) throw new Error('Failed to resolve ticket');
 
     // Get the assigned user's email if assigned_to exists
-    let assignedEmail = null;
-    if (data.assigned_to) {
-      try {
-        const { data: userInfo, error: userError } = await supabase
-          .from('user_roles')
-          .select('email')
-          .eq('user_id', data.assigned_to)
-          .single();
-
-        assignedEmail = (!userError && userInfo) ? userInfo.email : null;
-      } catch (err) {
-        console.warn('⚠️ API: Could not fetch assigned user email from user_roles:', err);
-      }
-    }
+    // DISABLED: user_roles queries cause 400 errors due to RLS policies
+    // let assignedEmail = null;
+    // if (data.assigned_to) {
+    //   try {
+    //     const { data: userInfo, error: userError } = await supabase
+    //       .from('user_roles')
+    //       .select('email')
+    //       .eq('user_id', data.assigned_to)
+    //       .single();
+    //
+    //     assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+    //   } catch (err) {
+    //     console.warn('⚠️ API: Could not fetch assigned user email from user_roles:', err);
+    //   }
+    // }
+    const assignedEmail = null; // Temporarily disabled due to RLS issues
 
     return {
       ...data,
@@ -1081,20 +1086,22 @@ export const supportTicketService = {
     if (!data) throw new Error('Failed to update ticket status');
 
     // Get the assigned user's email if assigned_to exists
-    let assignedEmail = null;
-    if (data.assigned_to) {
-      try {
-        const { data: userInfo, error: userError } = await supabase
-          .from('user_roles')
-          .select('email')
-          .eq('user_id', data.assigned_to)
-          .single();
-
-        assignedEmail = (!userError && userInfo) ? userInfo.email : null;
-      } catch (err) {
-        console.warn('⚠️ API: Could not fetch assigned user email from user_roles:', err);
-      }
-    }
+    // DISABLED: user_roles queries cause 400 errors due to RLS policies
+    // let assignedEmail = null;
+    // if (data.assigned_to) {
+    //   try {
+    //     const { data: userInfo, error: userError } = await supabase
+    //       .from('user_roles')
+    //       .select('email')
+    //       .eq('user_id', data.assigned_to)
+    //       .single();
+    //
+    //     assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+    //   } catch (err) {
+    //     console.warn('⚠️ API: Could not fetch assigned user email from user_roles:', err);
+    //   }
+    // }
+    const assignedEmail = null; // Temporarily disabled due to RLS issues
 
     return {
       ...data,

@@ -41,6 +41,7 @@ interface SupportTicket {
 const EmployeeCustomers: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [customerDetails, setCustomerDetails] = useState<{
@@ -65,6 +66,7 @@ const EmployeeCustomers: React.FC = () => {
   useEffect(() => {
     fetchCustomers();
     fetchSupportTickets();
+    fetchEmployees();
   }, []);
 
   const fetchCustomers = async () => {
@@ -155,6 +157,19 @@ const EmployeeCustomers: React.FC = () => {
     } catch (err) {
       console.error('❌ Error fetching support tickets:', err);
       setSupportTickets([]);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      console.log('🔍 Fetching employees...');
+      const allUsers = await customerService.getAllUsers();
+      const employeesData = allUsers.filter(user => user.role === 'employee');
+      console.log('✅ Employees fetched:', employeesData);
+      setEmployees(employeesData);
+    } catch (err) {
+      console.error('❌ Error fetching employees:', err);
+      setEmployees([]);
     }
   };
 
@@ -443,16 +458,20 @@ const EmployeeCustomers: React.FC = () => {
                         <p>Created: {new Date(ticket.created_at).toLocaleDateString()}</p>
                       </div>
                       {/* Assignee Information */}
-                      {ticket.assigned_to_email ? (
-                        <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-md">
-                          <div className="flex items-center gap-2">
-                            <UserCheck className="h-4 w-4 text-blue-600" />
-                            <span className="text-xs font-medium text-blue-900">
-                              Assigned to: {ticket.assigned_to_email}
-                            </span>
+                      {ticket.assigned_to ? (() => {
+                        const assignedEmployee = employees.find(emp => emp.user_id === ticket.assigned_to);
+                        const employeeName = assignedEmployee ? (assignedEmployee.customer_name || assignedEmployee.email) : 'Support Team';
+                        return (
+                          <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                            <div className="flex items-center gap-2">
+                              <UserCheck className="h-4 w-4 text-blue-600" />
+                              <span className="text-xs font-medium text-blue-900">
+                                Assigned to: {employeeName}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      ) : (
+                        );
+                      })() : (
                         <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-md">
                           <div className="flex items-center gap-2">
                             <AlertTriangle className="h-4 w-4 text-orange-600" />
