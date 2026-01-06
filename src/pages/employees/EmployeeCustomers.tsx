@@ -62,8 +62,14 @@ const EmployeeCustomers: React.FC = () => {
   } | null>(null);
   const [confirmResolve, setConfirmResolve] = useState<SupportTicket | null>(null);
   const [newResponse, setNewResponse] = useState<string>('');
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) setCurrentUserId(user.id);
+    };
+    getCurrentUser();
     fetchCustomers();
     fetchSupportTickets();
     fetchEmployees();
@@ -715,15 +721,19 @@ const EmployeeCustomers: React.FC = () => {
                     <h4 className="font-medium mb-3">Responses ({ticketDetails.responses.length})</h4>
                     {ticketDetails.responses.length > 0 ? (
                       <div className="space-y-3 max-h-96 overflow-y-auto">
-                        {ticketDetails.responses.map((response, index) => (
-                          <div key={index} className="border rounded-lg p-4 bg-gray-50">
-                            <div className="flex justify-between items-start mb-2">
-                              <span className="font-medium text-sm">{response.responder_name || response.responder_email || 'Unknown'}</span>
-                              <span className="text-xs text-gray-500">{new Date(response.created_at).toLocaleString()}</span>
+                        {ticketDetails.responses.map((response, index) => {
+                          const isCurrentUser = response.responder_id === currentUserId;
+                          const responderName = isCurrentUser ? 'You' : (response.responder_name || response.responder_email || 'Unknown');
+                          return (
+                            <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                              <div className="flex justify-between items-start mb-2">
+                                <span className={`font-medium text-sm ${isCurrentUser ? 'text-blue-600' : 'text-red-600'}`}>{responderName}</span>
+                                <span className="text-xs text-gray-500">{new Date(response.created_at).toLocaleString()}</span>
+                              </div>
+                              <p className="text-sm whitespace-pre-wrap">{response.response_text}</p>
                             </div>
-                            <p className="text-sm whitespace-pre-wrap">{response.response_text}</p>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <p className="text-sm text-gray-500 italic">No responses yet</p>
@@ -778,15 +788,19 @@ const EmployeeCustomers: React.FC = () => {
                 <h4 className="font-semibold text-sm mb-4">Conversation</h4>
                 {respondModal?.responses && respondModal.responses.length > 0 ? (
                   <div className="space-y-3">
-                    {respondModal.responses.map((response, index) => (
-                      <div key={index} className="border rounded-lg p-4 bg-gray-50">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium text-sm">{response.responder_name || response.responder_email || 'Unknown'}</span>
-                          <span className="text-xs text-gray-500">{new Date(response.created_at).toLocaleString()}</span>
+                    {respondModal.responses.map((response, index) => {
+                      const isCurrentUser = response.responder_id === currentUserId;
+                      const responderName = isCurrentUser ? 'You' : (response.responder_name || response.responder_email || 'Unknown');
+                      return (
+                        <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                          <div className="flex justify-between items-start mb-2">
+                            <span className={`font-medium text-sm ${isCurrentUser ? 'text-blue-600' : 'text-red-600'}`}>{responderName}</span>
+                            <span className="text-xs text-gray-500">{new Date(response.created_at).toLocaleString()}</span>
+                          </div>
+                          <p className="text-sm whitespace-pre-wrap">{response.response_text}</p>
                         </div>
-                        <p className="text-sm whitespace-pre-wrap">{response.response_text}</p>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-sm text-gray-500 italic">No responses yet</p>
