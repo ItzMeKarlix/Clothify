@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from '@/components/ui/scroll-area';
 import toast from 'react-hot-toast';
 
 interface Customer {
@@ -655,20 +656,20 @@ const Customers: React.FC = () => {
           <CardHeader className="pb-3 sm:pb-4">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
-              Support Tickets
+              Active Support Tickets
             </CardTitle>
-            <CardDescription className="text-sm">View and manage customer support tickets</CardDescription>
+            <CardDescription className="text-sm">View and manage open customer support tickets</CardDescription>
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
-            {supportTickets.length === 0 ? (
+            {supportTickets.filter(t => t.status !== 'resolved' && t.status !== 'closed').length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>No support tickets found</p>
-                <p className="text-sm">Support tickets will appear here</p>
+                <p>No active support tickets</p>
+                <p className="text-sm">All tickets have been resolved</p>
               </div>
             ) : (
               <div className="space-y-3 sm:space-y-4">
-                {supportTickets.map((ticket) => (
+                {supportTickets.filter(t => t.status !== 'resolved' && t.status !== 'closed').map((ticket) => (
                   <div key={ticket.id} className="border rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow">
                     <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                       <div className="flex-1 min-w-0">
@@ -743,46 +744,61 @@ const Customers: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Admin Actions Summary */}
-        <Card className="mt-6">
-          <CardHeader className="pb-3 sm:pb-4">
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Shield className="w-4 h-4 sm:w-5 sm:h-5" />
-              Admin Capabilities
-            </CardTitle>
-            <CardDescription className="text-sm">Overview of administrative privileges and actions</CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            <ul className="text-sm text-gray-700 space-y-2">
-              <li className="flex items-center gap-2">
-                <Eye className="w-4 h-4 text-blue-500" />
-                View all customer accounts and activity
-              </li>
-              <li className="flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-blue-500" />
-                Access and manage all support tickets
-              </li>
-              <li className="flex items-center gap-2">
-                <UserX className="w-4 h-4 text-red-500" />
-                Delete customer accounts (with confirmation)
-              </li>
-              <li className="flex items-center gap-2">
-                <UserCheck className="w-4 h-4 text-blue-500" />
-                Assign tickets to employees
-              </li>
-              <li className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-blue-500" />
-                Override ticket status and priority
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
+        {/* Ticket History Section */}
+        {supportTickets.filter(t => t.status === 'resolved' || t.status === 'closed').length > 0 && (
+          <Card className="mt-6">
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                Ticket History
+              </CardTitle>
+              <CardDescription className="text-sm">View resolved and closed tickets</CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-6">
+              <div className="space-y-3 sm:space-y-4">
+                {supportTickets.filter(t => t.status === 'resolved' || t.status === 'closed').map((ticket) => (
+                  <div key={ticket.id} className="border rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow bg-gray-50">
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-sm sm:text-base truncate">{ticket.subject}</h3>
+                          <Badge variant={
+                            ticket.status === 'resolved' ? 'secondary' : 'outline'
+                          }>
+                            {ticket.status.replace('-', ' ')}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {ticket.priority.toUpperCase()}
+                          </Badge>
+                        </div>
+                        <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-2">{ticket.description}</p>
+                        <div className="text-xs sm:text-sm text-gray-600 space-y-1">
+                          <p>Ticket #{ticket.ticket_number} • From: {ticket.customer_email}</p>
+                          {ticket.category_name && <p>Category: {ticket.category_name}</p>}
+                          <p>Created: {new Date(ticket.created_at).toLocaleDateString()}</p>
+                          {ticket.resolved_at && <p>Resolved: {new Date(ticket.resolved_at).toLocaleDateString()}</p>}
+                        </div>
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                        <Button size="sm" variant="outline" onClick={() => handleViewTicketDetails(ticket.id, ticket.subject)}>
+                          <Eye className="w-4 h-4 mr-1" />
+                          View
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
       </>
 
-      {/* Ticket Details Modal */}
-      {ticketDetails ? (
+      {/* Ticket Details Modal - Active Tickets */}
+      {ticketDetails && ticketDetails.ticket && ticketDetails.ticket.status !== 'resolved' && ticketDetails.ticket.status !== 'closed' ? (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full mx-4 h-[85vh] z-10 overflow-hidden flex flex-col">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 h-[85vh] z-10 overflow-hidden flex flex-col">
             <div className="p-6 border-b border-gray-200 flex items-start justify-between flex-shrink-0">
               <div>
                 <h3 className="text-xl font-semibold">Ticket #{ticketDetails.ticket?.ticket_number} - {ticketDetails.ticket?.subject}</h3>
@@ -797,13 +813,25 @@ const Customers: React.FC = () => {
             </div>
 
             {ticketDetails.ticket && (
-              <div className="p-6 flex-1 overflow-hidden">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
-                  {/* Left Column - Conversation */}
-                  <div className="flex flex-col h-full min-h-0">
-                    <div className="flex-shrink-0">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Details</h4>
-                      <div className="bg-gray-50 rounded p-4 space-y-3">
+              <div className="p-6 flex-1 overflow-y-auto w-full">
+                <div>
+                  {/* Details Section */}
+                  <div className="flex-shrink-0">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Ticket Information</h4>
+                    <div className="bg-gray-50 rounded p-4 space-y-4">
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">Subject</label>
+                        <p className="text-sm font-semibold mt-1">{ticketDetails.ticket.subject}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">Ticket Number</label>
+                        <p className="text-sm mt-1">#{ticketDetails.ticket.ticket_number}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">Customer Email</label>
+                        <p className="text-sm mt-1">{ticketDetails.ticket.customer_email}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="text-xs font-medium text-gray-500">Status</label>
                           <Badge variant={
@@ -811,112 +839,158 @@ const Customers: React.FC = () => {
                             ticketDetails.ticket.status === 'in-progress' ? 'default' :
                             ticketDetails.ticket.status === 'resolved' ? 'secondary' :
                             'outline'
-                          }>
+                          } className="mt-1">
                             {ticketDetails.ticket.status.replace('-', ' ')}
                           </Badge>
                         </div>
                         <div>
                           <label className="text-xs font-medium text-gray-500">Priority</label>
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs mt-1">
                             {ticketDetails.ticket.priority.toUpperCase()}
                           </Badge>
                         </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-500">Created</label>
-                          <p className="text-xs">{new Date(ticketDetails.ticket.created_at).toLocaleString()}</p>
-                        </div>
-                        <div className="border-t pt-3">
-                          <p className="text-sm whitespace-pre-line text-gray-700">{ticketDetails.ticket.description}</p>
-                        </div>
                       </div>
-                    </div>
-
-                    <div className="flex-1 overflow-hidden flex flex-col min-h-0 mt-4">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2 flex-shrink-0">Responses</h4>
-                      <div className="flex-1 overflow-y-auto pr-4 border border-gray-200 rounded bg-gradient-to-b from-white to-gray-50 p-3">
-                        {ticketDetails.responses.length > 0 ? (
-                          <div className="space-y-3">
-                            {ticketDetails.responses.map((response, index) => {
-                              const isCurrentUser = response.responder_id === currentUserId;
-                              const responderName = isCurrentUser ? 'You' : (response.responder_name || response.responder_email || 'Unknown');
-                              return (
-                                <div key={index} className="border-l-2 border-blue-500 pl-3 py-2 bg-white rounded-md shadow-sm">
-                                  <div className="text-xs text-gray-500 mb-1">
-                                    <span className={`font-medium ${isCurrentUser ? 'text-blue-600' : 'text-red-600'}`}>
-                                      {responderName}
-                                    </span>
-                                    <span className="mx-2">•</span>
-                                    <span>{new Date(response.created_at).toLocaleString()}</span>
-                                  </div>
-                                  <div className="text-gray-700 text-sm whitespace-pre-line">{response.response_text}</div>
-                                </div>
-                              );
-                            })}
-                          </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">Created</label>
+                        <p className="text-sm mt-1">{new Date(ticketDetails.ticket.created_at).toLocaleString()}</p>
+                      </div>
+                      {ticketDetails.ticket.resolved_at && (
+                        <div>
+                          <label className="text-xs font-medium text-gray-500">Resolved</label>
+                          <p className="text-sm mt-1">{new Date(ticketDetails.ticket.resolved_at).toLocaleString()}</p>
+                        </div>
+                      )}
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">Assigned To</label>
+                        {ticketDetails.ticket.assigned_to_email ? (
+                          <p className="text-sm mt-1">{ticketDetails.ticket.assigned_to_email}</p>
                         ) : (
-                          <p className="text-sm text-gray-500">No responses yet.</p>
+                          <p className="text-sm text-gray-500 mt-1">Unassigned</p>
                         )}
+                      </div>
+                      <div className="border-t pt-4">
+                        <label className="text-xs font-medium text-gray-500 block mb-2">Description</label>
+                        <p className="text-sm whitespace-pre-line text-gray-700 bg-white p-3 rounded border border-gray-200">{ticketDetails.ticket.description}</p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Right Column - Assignment & Quick Actions */}
-                  <div className="md:border-l md:border-gray-200 md:pl-6 flex flex-col h-full">
-                    <div className="flex-1 overflow-y-auto">
-                      <div className="space-y-4">
+                  {/* Action Buttons */}
+                  <div className="mt-6 flex gap-3">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setRespondModal({
+                          ticket: ticketDetails.ticket,
+                          response: '',
+                          responses: ticketDetails.responses
+                        });
+                        setTicketDetails(null);
+                      }}
+                    >
+                      <MessageSquare className="w-4 h-4 mr-1" />
+                      Respond
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleMarkResolved(ticketDetails.ticket!)}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Resolve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleAssignTicket(ticketDetails.ticket!)}
+                    >
+                      <UserCheck className="w-4 h-4 mr-1" />
+                      Assign
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Ticket History Modal - Resolved/Closed Tickets */}
+      {ticketDetails && ticketDetails.ticket && (ticketDetails.ticket.status === 'resolved' || ticketDetails.ticket.status === 'closed') ? (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 z-10 flex flex-col">
+            <div className="p-6 border-b border-gray-200 flex items-start justify-between flex-shrink-0">
+              <div>
+                <h3 className="text-xl font-semibold">Ticket #{ticketDetails.ticket?.ticket_number} - {ticketDetails.ticket?.subject}</h3>
+                <p className="text-sm text-gray-500">Customer: {ticketDetails.ticket?.customer_email}</p>
+              </div>
+              <button
+                onClick={() => setTicketDetails(null)}
+                className="text-gray-500 hover:text-black"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+
+            {ticketDetails.ticket && (
+              <div className="p-6 flex-1 w-full">
+                <div>
+                  {/* Details Section */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Ticket Information</h4>
+                    <div className="bg-gray-50 rounded p-4 space-y-4">
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">Subject</label>
+                        <p className="text-sm font-semibold mt-1">{ticketDetails.ticket.subject}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">Ticket Number</label>
+                        <p className="text-sm mt-1">#{ticketDetails.ticket.ticket_number}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">Customer Email</label>
+                        <p className="text-sm mt-1">{ticketDetails.ticket.customer_email}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-3">Assignment</label>
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            {ticketDetails.ticket.assigned_to ? (
-                              <div className="flex items-center gap-3">
-                                <UserCheck className="h-5 w-5 text-blue-600" />
-                                <div>
-                                  <p className="text-sm font-medium text-blue-900">
-                                    Assigned to: {ticketDetails.ticket.assigned_to_email || 'Unknown Employee'}
-                                  </p>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-3">
-                                <AlertTriangle className="h-5 w-5 text-orange-600" />
-                                <div>
-                                  <p className="text-sm font-medium text-orange-900">
-                                    Unassigned Ticket
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                          <label className="text-xs font-medium text-gray-500">Status</label>
+                          <Badge variant={
+                            ticketDetails.ticket.status === 'open' ? 'destructive' :
+                            ticketDetails.ticket.status === 'in-progress' ? 'default' :
+                            ticketDetails.ticket.status === 'resolved' ? 'secondary' :
+                            'outline'
+                          } className="mt-1">
+                            {ticketDetails.ticket.status.replace('-', ' ')}
+                          </Badge>
                         </div>
                         <div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setRespondModal({
-                                ticket: ticketDetails.ticket,
-                                response: '',
-                                responses: ticketDetails.responses
-                              });
-                              setTicketDetails(null);
-                            }}
-                            className="w-full"
-                          >
-                            <MessageSquare className="w-4 h-4 mr-1" />
-                            Respond
-                          </Button>
+                          <label className="text-xs font-medium text-gray-500">Priority</label>
+                          <Badge variant="outline" className="text-xs mt-1">
+                            {ticketDetails.ticket.priority.toUpperCase()}
+                          </Badge>
                         </div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">Created</label>
+                        <p className="text-sm mt-1">{new Date(ticketDetails.ticket.created_at).toLocaleString()}</p>
+                      </div>
+                      {ticketDetails.ticket.resolved_at && (
                         <div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleMarkResolved(ticketDetails.ticket!)}
-                            className="w-full"
-                          >
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            Resolve
-                          </Button>
+                          <label className="text-xs font-medium text-gray-500">Resolved</label>
+                          <p className="text-sm mt-1">{new Date(ticketDetails.ticket.resolved_at).toLocaleString()}</p>
                         </div>
+                      )}
+                      <div>
+                        <label className="text-xs font-medium text-gray-500">Assigned To</label>
+                        {ticketDetails.ticket.assigned_to_email ? (
+                          <p className="text-sm mt-1">{ticketDetails.ticket.assigned_to_email}</p>
+                        ) : (
+                          <p className="text-sm text-gray-500 mt-1">Unassigned</p>
+                        )}
+                      </div>
+                      <div className="border-t pt-4">
+                        <label className="text-xs font-medium text-gray-500 block mb-2">Description</label>
+                        <p className="text-sm whitespace-pre-line text-gray-700 bg-white p-3 rounded border border-gray-200">{ticketDetails.ticket.description}</p>
                       </div>
                     </div>
                   </div>
@@ -965,28 +1039,32 @@ const Customers: React.FC = () => {
             {/* Body - Two Column Layout */}
             <div className="flex flex-1 overflow-hidden">
               {/* Left Side - Conversation History */}
-              <div className="flex-1 border-r overflow-y-auto p-6 bg-gradient-to-b from-white to-gray-50">
-                <h4 className="font-semibold text-sm mb-4">Conversation</h4>
-                {respondModal?.responses && respondModal.responses.length > 0 ? (
-                  <div className="space-y-3">
-                    {respondModal.responses.map((response, index) => {
-                      const isCurrentUser = response.responder_id === currentUserId;
-                      const responderName = isCurrentUser ? 'You' : (response.responder_name || response.responder_email || 'Unknown');
-                      return (
-                        <div key={index} className="border rounded-lg p-4 bg-gray-50">
-                          <div className="flex justify-between items-start mb-2">
-                            <span className={`font-medium text-sm ${isCurrentUser ? 'text-blue-600' : 'text-red-600'}`}>{responderName}</span>
-                            <span className="text-xs text-gray-500">{new Date(response.created_at).toLocaleString()}</span>
+              <ScrollArea className="flex-1 border-r bg-gradient-to-b from-white to-gray-50 min-h-0">
+                <div className="p-6">
+                  <h4 className="font-semibold text-sm mb-4">Conversation</h4>
+                  {respondModal?.responses && respondModal.responses.length > 0 ? (
+                    <div className="space-y-3">
+                      {respondModal.responses.map((response, index) => {
+                        const isCurrentUser = response.responder_id === currentUserId;
+                        const responderName = isCurrentUser ? 'You' : (response.responder_name || response.responder_email || 'Unknown');
+                        return (
+                          <div key={index} className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`border rounded-lg p-4 max-w-xs ${isCurrentUser ? 'bg-blue-50' : 'bg-gray-50'}`}>
+                              <div className="flex justify-between items-start mb-2 gap-2">
+                                <span className={`font-medium text-sm ${isCurrentUser ? 'text-blue-600' : 'text-red-600'}`}>{responderName}</span>
+                                <span className="text-xs text-gray-500 flex-shrink-0">{new Date(response.created_at).toLocaleString()}</span>
+                              </div>
+                              <p className="text-sm whitespace-pre-wrap">{response.response_text}</p>
+                            </div>
                           </div>
-                          <p className="text-sm whitespace-pre-wrap">{response.response_text}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500 italic">No responses yet</p>
-                )}
-              </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">No responses yet</p>
+                  )}
+                </div>
+              </ScrollArea>
 
               {/* Right Side - Response Form */}
               <div className="w-150 bg-gray-50 p-6 overflow-y-auto flex flex-col">

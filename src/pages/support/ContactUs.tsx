@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supportTicketService, supportTicketCategoryService, authService, supportTicketAttachmentService, supabase } from '../../api/api';
 import { SupportTicketCategory, SupportTicket } from '../../types/database';
 import { MessageSquare, AlertCircle, CheckCircle, Clock, User } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const ContactUs: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -649,52 +650,70 @@ const ContactUs: React.FC = () => {
 
                               <div className="flex-1 overflow-hidden flex flex-col min-h-0 mt-4">
                                 <h4 className="text-sm font-medium text-gray-700 mb-2 flex-shrink-0">Responses</h4>
-                                <div className="flex-1 overflow-y-auto pr-4 border border-gray-200 rounded bg-gradient-to-b from-white to-gray-50 p-3">
-                                  {selectedTicket.responses && selectedTicket.responses.length > 0 ? (
-                                    <div className="space-y-3">
-                                      {selectedTicket.responses.map((resp) => {
-                                        const isYou = resp.responder_id === null;
-                                        return (
-                                          <div key={resp.id} className="border-l-2 border-blue-500 pl-3 py-2 bg-white rounded-md shadow-sm">
-                                            <div className="text-xs text-gray-500 mb-1">
-                                              <span className={`font-medium ${isYou ? 'text-blue-600' : 'text-red-600'}`}>
-                                                {isYou ? 'You' : (resp.responder_name || resp.responder_email || 'Support Team')}
-                                              </span>
-                                              <span className="mx-2">•</span>
-                                              <span>{new Date(resp.created_at).toLocaleString()}</span>
+                                <ScrollArea className="flex-1 rounded bg-gradient-to-b from-white to-gray-50 min-h-0">
+                                  <div className="p-4 h-full">
+                                    {selectedTicket.responses && selectedTicket.responses.length > 0 ? (
+                                      <div className="space-y-3">
+                                        {selectedTicket.responses.map((resp) => {
+                                          const isYou = resp.responder_id === null;
+                                          return (
+                                            <div key={resp.id} className={`flex ${isYou ? 'justify-end' : 'justify-start'}`}>
+                                              <div className={`border rounded-lg p-4 max-w-xs ${isYou ? 'bg-blue-50' : 'bg-gray-50'}`}>
+                                                <div className="flex justify-between items-start mb-2 gap-2">
+                                                  <span className={`font-medium text-sm ${isYou ? 'text-blue-600' : 'text-red-600'}`}>
+                                                    {isYou ? 'You' : (resp.responder_name || resp.responder_email || 'Support Team')}
+                                                  </span>
+                                                  <span className="text-xs text-gray-500 flex-shrink-0">{new Date(resp.created_at).toLocaleString()}</span>
+                                                </div>
+                                                <p className="text-sm whitespace-pre-wrap">{resp.response_text}</p>
+                                              </div>
                                             </div>
-                                            <div className="text-gray-700 text-sm whitespace-pre-line">{resp.response_text}</div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  ) : (
-                                    <p className="text-sm text-gray-500">No responses yet.</p>
-                                  )}
-                                </div>
+                                          );
+                                        })}
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-gray-500">No responses yet.</p>
+                                    )}
+                                  </div>
+                                </ScrollArea>
                               </div>
                             </div>
 
                             {/* Right Column - Reply Box */}
                             <div className="md:border-l md:border-gray-200 md:pl-6 flex flex-col h-full">
-                              <h4 className="text-sm font-medium text-gray-700 mb-2 flex-shrink-0">Add a response</h4>
-                              <div className="flex flex-col flex-1">
-                                <textarea 
-                                  value={newResponseText} 
-                                  onChange={(e) => setNewResponseText(e.target.value)} 
-                                  className="w-full p-3 border border-gray-300 rounded-md flex-1 resize-none" 
-                                  placeholder="Type your message here..."
-                                />
-                                <div className="mt-4 flex justify-end flex-shrink-0">
-                                  <button 
-                                    onClick={submitResponse} 
-                                    disabled={responseSubmitting || !newResponseText.trim()} 
-                                    className="bg-black text-white px-6 py-2.5 rounded hover:bg-gray-800 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                  >
-                                    {responseSubmitting ? 'Sending...' : 'Send Reply'}
-                                  </button>
+                              {selectedTicket.status === 'resolved' || selectedTicket.status === 'closed' ? (
+                                <div className="flex flex-col items-center justify-center h-full">
+                                  <div className="bg-gray-50 rounded-lg p-6 text-center">
+                                    <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                                    <h4 className="text-sm font-medium text-gray-700 mb-2">Ticket Closed</h4>
+                                    <p className="text-sm text-gray-600">
+                                      This ticket has been {selectedTicket.status}. 
+                                      {selectedTicket.status === 'resolved' ? ' If you need further assistance, please create a new support ticket.' : ''}
+                                    </p>
+                                  </div>
                                 </div>
-                              </div>
+                              ) : (
+                                <>
+                                  <h4 className="text-sm font-medium text-gray-700 mb-2 flex-shrink-0">Add a response</h4>
+                                  <div className="flex flex-col flex-1">
+                                    <textarea 
+                                      value={newResponseText} 
+                                      onChange={(e) => setNewResponseText(e.target.value)} 
+                                      className="w-full p-3 border border-gray-300 rounded-md flex-1 resize-none" 
+                                      placeholder="Type your message here..."
+                                    />
+                                    <div className="mt-4 flex justify-end flex-shrink-0">
+                                      <button 
+                                        onClick={submitResponse} 
+                                        disabled={responseSubmitting || !newResponseText.trim()} 
+                                        className="bg-black text-white px-6 py-2.5 rounded hover:bg-gray-800 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                      >
+                                        {responseSubmitting ? 'Sending...' : 'Send Reply'}
+                                      </button>
+                                    </div>
+                                  </div>
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>
