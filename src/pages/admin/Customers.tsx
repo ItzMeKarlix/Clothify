@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { customerService, supportTicketService, orderService } from '../../api/api';
+import { customerService, supportTicketService} from '../../api/api';
 import { supabase } from '../../api/api';
-import { AlertTriangle, Eye, MessageSquare, UserX, Users, RefreshCw, CheckCircle, XCircle, Shield, UserCheck } from 'lucide-react';
+import { AlertTriangle, Eye, MessageSquare, Users, RefreshCw, CheckCircle, XCircle, UserCheck } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -68,7 +68,6 @@ const Customers: React.FC = () => {
     assigneeId: string;
   } | null>(null);
   const [employees, setEmployees] = useState<any[]>([]);
-  const [newResponse, setNewResponse] = useState<string>('');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -156,60 +155,6 @@ const Customers: React.FC = () => {
     }
   };
 
-  const handleViewCustomer = async (customerId: string, customerEmail: string) => {
-    // Check if this is a placeholder user (email-based ID)
-    const isPlaceholder = customerId.startsWith('email_');
-
-    if (isPlaceholder) {
-      // For placeholder users, show limited information from tickets
-      try {
-        const customerTickets = await supportTicketService.getTicketsByEmail(customerEmail);
-
-        setCustomerDetails({
-          customer: {
-            user_id: customerId,
-            email: customerEmail,
-            user_created_at: customerTickets[0]?.created_at || new Date().toISOString(),
-            customer_name: undefined,
-            last_sign_in_at: null,
-            email_confirmed_at: null,
-            role: 'customer',
-            role_assigned_at: null,
-            is_placeholder: true
-          },
-          orders: [], // No orders available for placeholder users
-          tickets: customerTickets
-        });
-      } catch (error) {
-        console.error('Error fetching customer ticket data:', error);
-        alert('Failed to load customer ticket information');
-      }
-      return;
-    }
-
-    // Validate that customerId is a valid UUID for real users
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(customerId)) {
-      alert(`Cannot view customer details: Invalid customer ID format (${customerId}).`);
-      return;
-    }
-
-    try {
-      const customerDetails = await customerService.getById(customerId);
-      const customerOrders = await orderService.getByCustomerEmail(customerEmail);
-      const customerTickets = await supportTicketService.getTicketsByEmail(customerEmail);
-
-      setCustomerDetails({
-        customer: customerDetails,
-        orders: customerOrders,
-        tickets: customerTickets
-      });
-    } catch (error) {
-      console.error('Error fetching customer details:', error);
-      alert('Failed to load customer details');
-    }
-  };
-
   const handleRespondToTicket = async (ticket: SupportTicket) => {
     try {
       // Fetch responses for this ticket to display in the respond modal
@@ -287,7 +232,6 @@ const Customers: React.FC = () => {
       });
 
       toast.success('Response added successfully!', { id: 'customers-response-added' });
-      setNewResponse('');
       if (respondModal) setRespondModal(null);
       
       // Refresh ticket responses in the modal
@@ -404,76 +348,7 @@ const Customers: React.FC = () => {
         </Button>
       </div>
 
-      <>
-        {/* Customers Section */}
-        <Card className="mb-6">
-          <CardHeader className="pb-3 sm:pb-4">
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
-              Customer Directory
-            </CardTitle>
-            <CardDescription className="text-sm">Manage customer accounts and view their information</CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            {customers.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>No customers found</p>
-                <p className="text-sm">Customer data will appear here</p>
-              </div>
-            ) : (
-              <div className="space-y-3 sm:space-y-4">
-                {customers.map((customer) => {
-                  return (
-                    <div key={customer.user_id} className="border rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow">
-                      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                            <h3 className="font-semibold text-sm sm:text-base truncate">{customer.email}</h3>
-                            <Badge variant={
-                              customer.role === 'admin' ? 'destructive' :
-                              customer.role === 'employee' ? 'default' :
-                              'outline'
-                            }>
-                              {customer.role}
-                            </Badge>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2 mb-2">
-                            <Badge variant={
-                              !customer.email_confirmed_at ? 'secondary' :
-                              !customer.last_sign_in_at ? 'outline' :
-                              'default'
-                            }>
-                              {!customer.email_confirmed_at ? 'Unverified' :
-                               !customer.last_sign_in_at ? 'Never Signed In' :
-                               'Active'}
-                            </Badge>
-                          </div>
-                          <div className="text-xs sm:text-sm text-gray-600 space-y-1">
-                            <p>Joined: {new Date(customer.user_created_at).toLocaleDateString()}</p>
-                            <p>Last sign in: {customer.last_sign_in_at ? new Date(customer.last_sign_in_at).toLocaleDateString() : 'Never'}</p>
-                          </div>
-                        </div>
-                        <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-                          <Button size="sm" variant="outline" onClick={() => handleViewCustomer(customer.user_id, customer.email)}>
-                            <Eye className="w-4 h-4 mr-1" />
-                            View
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => setDeleteConfirm(customer.user_id)}>
-                            <UserX className="w-4 h-4 mr-1" />
-                            Delete
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal */}
         {deleteConfirm && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
@@ -793,13 +668,11 @@ const Customers: React.FC = () => {
           </Card>
         )}
 
-      </>
-
       {/* Ticket Details Modal - Active Tickets */}
       {ticketDetails && ticketDetails.ticket && ticketDetails.ticket.status !== 'resolved' && ticketDetails.ticket.status !== 'closed' ? (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 h-[85vh] z-10 overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-gray-200 flex items-start justify-between flex-shrink-0">
+            <div className="p-6 border-b border-gray-200 flex items-start justify-between shrink-0">
               <div>
                 <h3 className="text-xl font-semibold">Ticket #{ticketDetails.ticket?.ticket_number} - {ticketDetails.ticket?.subject}</h3>
                 <p className="text-sm text-gray-500">Customer: {ticketDetails.ticket?.customer_email}</p>
@@ -816,7 +689,7 @@ const Customers: React.FC = () => {
               <div className="p-6 flex-1 overflow-y-auto w-full">
                 <div>
                   {/* Details Section */}
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     <h4 className="text-sm font-medium text-gray-700 mb-3">Ticket Information</h4>
                     <div className="bg-gray-50 rounded p-4 space-y-4">
                       <div>
@@ -837,6 +710,7 @@ const Customers: React.FC = () => {
                           <Badge variant={
                             ticketDetails.ticket.status === 'open' ? 'destructive' :
                             ticketDetails.ticket.status === 'in-progress' ? 'default' :
+                            ticketDetails.ticket.status === 'waiting-for-customer' ? 'outline' :
                             ticketDetails.ticket.status === 'resolved' ? 'secondary' :
                             'outline'
                           } className="mt-1">
@@ -919,7 +793,7 @@ const Customers: React.FC = () => {
       {ticketDetails && ticketDetails.ticket && (ticketDetails.ticket.status === 'resolved' || ticketDetails.ticket.status === 'closed') ? (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 z-10 flex flex-col">
-            <div className="p-6 border-b border-gray-200 flex items-start justify-between flex-shrink-0">
+            <div className="p-6 border-b border-gray-200 flex items-start justify-between shrink-0">
               <div>
                 <h3 className="text-xl font-semibold">Ticket #{ticketDetails.ticket?.ticket_number} - {ticketDetails.ticket?.subject}</h3>
                 <p className="text-sm text-gray-500">Customer: {ticketDetails.ticket?.customer_email}</p>
@@ -955,10 +829,7 @@ const Customers: React.FC = () => {
                         <div>
                           <label className="text-xs font-medium text-gray-500">Status</label>
                           <Badge variant={
-                            ticketDetails.ticket.status === 'open' ? 'destructive' :
-                            ticketDetails.ticket.status === 'in-progress' ? 'default' :
-                            ticketDetails.ticket.status === 'resolved' ? 'secondary' :
-                            'outline'
+                            ticketDetails.ticket.status === 'resolved' ? 'secondary' : 'outline'
                           } className="mt-1">
                             {ticketDetails.ticket.status.replace('-', ' ')}
                           </Badge>
@@ -1039,7 +910,7 @@ const Customers: React.FC = () => {
             {/* Body - Two Column Layout */}
             <div className="flex flex-1 overflow-hidden">
               {/* Left Side - Conversation History */}
-              <ScrollArea className="flex-1 border-r bg-gradient-to-b from-white to-gray-50 min-h-0">
+              <ScrollArea className="flex-1 border-r bg-linear-to-b from-white to-gray-50 min-h-0">
                 <div className="p-6">
                   <h4 className="font-semibold text-sm mb-4">Conversation</h4>
                   {respondModal?.responses && respondModal.responses.length > 0 ? (
@@ -1052,7 +923,7 @@ const Customers: React.FC = () => {
                             <div className={`border rounded-lg p-4 max-w-xs ${isCurrentUser ? 'bg-blue-50' : 'bg-gray-50'}`}>
                               <div className="flex justify-between items-start mb-2 gap-2">
                                 <span className={`font-medium text-sm ${isCurrentUser ? 'text-blue-600' : 'text-red-600'}`}>{responderName}</span>
-                                <span className="text-xs text-gray-500 flex-shrink-0">{new Date(response.created_at).toLocaleString()}</span>
+                                <span className="text-xs text-gray-500 shrink-0">{new Date(response.created_at).toLocaleString()}</span>
                               </div>
                               <p className="text-sm whitespace-pre-wrap">{response.response_text}</p>
                             </div>

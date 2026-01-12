@@ -13,11 +13,11 @@ const getPasswordStrength = (password: string) => {
 
   if (!password) return { strength: 0, feedback: ['Enter a password'], color: 'gray', label: 'None' };
 
-  if (password.length >= 8) strength++;
-  else feedback.push('At least 8 characters');
+  if (password.length >= 6) strength++;
+  else feedback.push('At least 6 characters');
 
-  if (password.length >= 12) strength++;
-  else if (password.length >= 8) feedback.push('12+ characters for stronger password');
+  if (password.length >= 8) strength++;
+  else if (password.length >= 6) feedback.push('8+ characters recommended');
 
   if (/[a-z]/.test(password)) strength++;
   else feedback.push('Add lowercase letters');
@@ -57,7 +57,7 @@ interface OnboardingModalProps {
   onClose?: () => void;
 }
 
-export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, userEmail, onClose }) => {
+export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, userEmail }) => {
   const navigate = useNavigate();
   
   const [showSetup, setShowSetup] = useState(false);
@@ -103,37 +103,50 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, userEm
       const session = await supabase.auth.getSession();
       if (!session.data.session?.user?.id) {
         toast.error('Session expired');
+        setLoading(false);
         return;
       }
 
+      const userId = session.data.session.user.id;
+
       // Save username to auth metadata
-      await supabase.auth.updateUser({
-        data: { username: username.trim() }
-      });
+      try {
+        await supabase.auth.updateUser({
+          data: { username: username.trim() }
+        });
+      } catch (usernameErr) {
+        console.error('Error updating username:', usernameErr);
+        // Continue even if username update fails
+      }
 
       // Update password
-      await authService.updatePassword(newPassword);
+      try {
+        await authService.updatePassword(newPassword);
+      } catch (passwordErr: any) {
+        console.error('Password update error:', passwordErr);
+        toast.error(`Password update failed: ${passwordErr?.message || 'Unknown error'}`);
+        setLoading(false);
+        return;
+      }
 
       // Mark onboarding as complete
-      await supabase
-        .from('user_roles')
-        .update({ onboarding_completed: true })
-        .eq('user_id', session.data.session.user.id);
+      try {
+        await supabase
+          .from('user_roles')
+          .update({ onboarding_completed: true })
+          .eq('user_id', userId);
+      } catch (onboardingErr) {
+        console.error('Error marking onboarding complete:', onboardingErr);
+        // Continue even if this fails
+      }
 
       toast.success('Account setup completed successfully!');
       
-      // Redirect based on user role
-      const { data: userRole } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', session.data.session.user.id)
-        .single();
+      // Small delay to ensure database is updated
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      if (userRole?.role === 'admin') {
-        navigate('/admin/dashboard');
-      } else {
-        navigate('/employee/dashboard');
-      }
+      // Refresh the page
+      window.location.reload();
     } catch (err: any) {
       console.error('Setup failed:', err);
       toast.error(err?.message || 'Failed to complete setup');
@@ -194,7 +207,15 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, userEm
           <h3 className="text-lg font-semibold">Complete Your Setup</h3>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {loading && (
+          <div className="py-12 flex flex-col items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+            <p className="text-gray-600 text-sm">Setting up your account...</p>
+          </div>
+        )}
+
+        {!loading && (
+          <form onSubmit={handleSubmit} className="space-y-4">
           {/* Username Field */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Username</Label>
@@ -221,7 +242,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, userEm
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="New password (min 8 characters)"
+                placeholder="New password (min 6 characters)"
                 disabled={loading}
               />
               <button
@@ -275,7 +296,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, userEm
                   <div className="bg-gray-50 p-3 rounded border border-gray-200 space-y-1">
                     {passwordStrength.feedback.map((item, idx) => (
                       <div key={idx} className="flex items-center gap-2 text-xs text-gray-600">
-                        <AlertCircle className="h-3 w-3 text-amber-500 flex-shrink-0" />
+                        <AlertCircle className="h-3 w-3 text-amber-500 shrink-0" />
                         <span>{item}</span>
                       </div>
                     ))}
@@ -284,7 +305,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, userEm
 
                 {isPasswordValid && (
                   <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 p-2 rounded border border-green-200">
-                    <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                    <CheckCircle className="h-4 w-4 shrink-0" />
                     <span>Password is strong enough!</span>
                   </div>
                 )}
@@ -335,6 +356,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, userEm
             </Button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

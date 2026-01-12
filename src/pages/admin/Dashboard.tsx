@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Users, Package, CreditCard, TrendingUp, BarChart3 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -77,7 +77,7 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <Link to="/admin/products" className="bg-white p-4 sm:p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
           <div className="flex items-center">
-            <ShoppingCart className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500 flex-shrink-0" />
+            <ShoppingCart className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500 shrink-0" />
             <div className="ml-3 sm:ml-4">
               <h2 className="text-lg sm:text-xl font-semibold">Products</h2>
               <p className="text-sm sm:text-base text-gray-600">Manage products</p>
@@ -86,7 +86,7 @@ const Dashboard: React.FC = () => {
         </Link>
         <Link to="/admin/inventory" className="bg-white p-4 sm:p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
           <div className="flex items-center">
-            <Package className="w-6 h-6 sm:w-8 sm:h-8 text-green-500 flex-shrink-0" />
+            <Package className="w-6 h-6 sm:w-8 sm:h-8 text-green-500 shrink-0" />
             <div className="ml-3 sm:ml-4">
               <h2 className="text-lg sm:text-xl font-semibold">Inventory</h2>
               <p className="text-sm sm:text-base text-gray-600">Track stock levels</p>
@@ -95,7 +95,7 @@ const Dashboard: React.FC = () => {
         </Link>
         <Link to="/admin/customers" className="bg-white p-4 sm:p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
           <div className="flex items-center">
-            <Users className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-500 flex-shrink-0" />
+            <Users className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-500 shrink-0" />
             <div className="ml-3 sm:ml-4">
               <h2 className="text-lg sm:text-xl font-semibold">Customers</h2>
               <p className="text-sm sm:text-base text-gray-600">View customer data</p>
@@ -104,7 +104,7 @@ const Dashboard: React.FC = () => {
         </Link>
         <Link to="/admin/payments" className="bg-white p-4 sm:p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
           <div className="flex items-center">
-            <CreditCard className="w-6 h-6 sm:w-8 sm:h-8 text-red-500 flex-shrink-0" />
+            <CreditCard className="w-6 h-6 sm:w-8 sm:h-8 text-red-500 shrink-0" />
             <div className="ml-3 sm:ml-4">
               <h2 className="text-lg sm:text-xl font-semibold">Payments</h2>
               <p className="text-sm sm:text-base text-gray-600">Manage transactions</p>
@@ -125,7 +125,7 @@ const Dashboard: React.FC = () => {
             <CardDescription className="text-sm">Monthly revenue and order trends</CardDescription>
           </CardHeader>
           <CardContent className="overflow-hidden pb-4 sm:pb-6">
-            <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px] w-full">
+            <ChartContainer config={chartConfig} className="h-62.5 sm:h-75 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={salesData}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -164,7 +164,7 @@ const Dashboard: React.FC = () => {
             <CardDescription className="text-sm">New and total customer acquisition</CardDescription>
           </CardHeader>
           <CardContent className="overflow-hidden pb-4 sm:pb-6">
-            <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px] w-full">
+            <ChartContainer config={chartConfig} className="h-62.5 sm:h-75 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={customerData}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -201,7 +201,7 @@ const Dashboard: React.FC = () => {
           <CardDescription className="text-sm">Sales and inventory by product category</CardDescription>
         </CardHeader>
         <CardContent className="overflow-hidden pb-4 sm:pb-6">
-          <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px] w-full">
+          <ChartContainer config={chartConfig} className="h-62.5 sm:h-75 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={productData}>
                 <CartesianGrid strokeDasharray="3 3" />

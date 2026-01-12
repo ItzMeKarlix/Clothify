@@ -370,58 +370,6 @@ const EmployeeCustomers: React.FC = () => {
         </Button>
       </div>
 
-      {/* Customers Section */}
-      <Card className="mb-6">
-        <CardHeader className="pb-3 sm:pb-4">
-          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-            <Users className="w-4 h-4 sm:w-5 sm:h-5" />
-            Customer Directory
-          </CardTitle>
-          <CardDescription className="text-sm">View customer information and account status</CardDescription>
-        </CardHeader>
-        <CardContent className="p-4 sm:p-6">
-          {customers.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No customers found</p>
-              <p className="text-sm">Customer data will appear here</p>
-            </div>
-          ) : (
-            <div className="space-y-3 sm:space-y-4">
-              {customers.map((customer) => (
-                <div key={customer.user_id} className="border rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow">
-                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                        <h3 className="font-semibold text-sm sm:text-base truncate">{customer.email}</h3>
-                        <Badge variant={customer.role === 'admin' ? 'destructive' : customer.role === 'employee' ? 'default' : 'outline'}>
-                          {customer.role.charAt(0).toUpperCase() + customer.role.slice(1)}
-                        </Badge>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <Badge variant={!customer.email_confirmed_at ? 'secondary' : !customer.last_sign_in_at ? 'outline' : 'default'}>
-                          {!customer.email_confirmed_at ? 'Unverified' : !customer.last_sign_in_at ? 'Never Signed In' : 'Active'}
-                        </Badge>
-                      </div>
-                      <div className="text-xs sm:text-sm text-gray-600 space-y-1">
-                        <p>Joined: {new Date(customer.user_created_at).toLocaleDateString()}</p>
-                        <p>Last sign in: {customer.last_sign_in_at ? new Date(customer.last_sign_in_at).toLocaleDateString() : 'Never'}</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-                      <Button size="sm" variant="outline" onClick={() => handleViewCustomerDetails(customer.user_id, customer.email)}>
-                        <Eye className="w-4 h-4 mr-1" />
-                        View
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Support Tickets Section */}
       <Card>
         <CardHeader className="pb-3 sm:pb-4">

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../api/api';
-import { Edit, Trash2, X, Mail, Shield, Eye, EyeOff, UserCheck, AlertTriangle, MessageSquare } from 'lucide-react';
+import { Edit, Trash2, X, Mail, Shield, Eye, EyeOff, UserCheck, AlertTriangle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import toast from 'react-hot-toast';
@@ -71,10 +71,8 @@ const Members: React.FC = () => {
   const [showDeletePassword, setShowDeletePassword] = useState(false);
 
   // Reports state
-  const [selectedReport, setSelectedReport] = useState<EmployeeReport | null>(null);
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [adminResponse, setAdminResponse] = useState('');
   const [updatingReport, setUpdatingReport] = useState(false);
+  const [showReportHistory, setShowReportHistory] = useState(false);
 
   useEffect(() => {
     fetchMembers();
@@ -191,9 +189,6 @@ const Members: React.FC = () => {
 
       // Refresh reports
       await fetchReports();
-      setShowReportModal(false);
-      setSelectedReport(null);
-      setAdminResponse('');
     } catch (err) {
       console.error('Error updating report:', err);
       alert('Failed to update report status');
@@ -603,7 +598,21 @@ const Members: React.FC = () => {
           <TabsContent value="reports" className="mt-6">
             {/* Reports list */}
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-semibold">Employee Reports</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-semibold">
+                  {showReportHistory ? 'Report History' : 'Employee Reports'}
+                </h2>
+                <button
+                  onClick={() => setShowReportHistory(!showReportHistory)}
+                  className={`px-4 py-2 rounded text-sm font-medium transition ${
+                    showReportHistory
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  {showReportHistory ? 'View Active Reports' : 'View History'}
+                </button>
+              </div>
               <button 
                 onClick={fetchReports}
                 className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 text-sm"
@@ -613,11 +622,23 @@ const Members: React.FC = () => {
               </button>
             </div>
 
-            {reports.length === 0 ? (
-              <p className="text-gray-600">No reports found.</p>
-            ) : (
-              <div className="space-y-4">
-                {reports.map((report) => (
+            {/* Filter reports based on view mode */}
+            {(() => {
+              const filteredReports = showReportHistory
+                ? reports.filter(r => r.status === 'closed')
+                : reports.filter(r => r.status !== 'closed');
+
+              if (filteredReports.length === 0) {
+                return (
+                  <p className="text-gray-600">
+                    {showReportHistory ? 'No closed reports found.' : 'No active reports found.'}
+                  </p>
+                );
+              }
+
+              return (
+                <div className="space-y-4">
+                  {filteredReports.map((report) => (
                   <Card key={report.id} className="p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
@@ -659,16 +680,6 @@ const Members: React.FC = () => {
                       {report.status !== 'resolved' && report.status !== 'closed' && (
                         <>
                           <button
-                            onClick={() => {
-                              setSelectedReport(report);
-                              setShowReportModal(true);
-                            }}
-                            className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 flex items-center gap-1"
-                          >
-                            <MessageSquare className="w-3 h-3" />
-                            Respond
-                          </button>
-                          <button
                             onClick={() => updateReportStatus(report.id, 'in_progress')}
                             className="bg-yellow-500 text-white px-3 py-1 rounded text-sm hover:bg-yellow-600"
                             disabled={updatingReport}
@@ -696,8 +707,9 @@ const Members: React.FC = () => {
                     </div>
                   </Card>
                 ))}
-              </div>
-            )}
+                </div>
+              );
+            })()}
           </TabsContent>
         </Tabs>
       </div>
@@ -1049,71 +1061,6 @@ const Members: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* Report Response Modal */}
-      {showReportModal && selectedReport && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-blue-600" />
-                Respond to Report
-              </h3>
-              <button
-                onClick={() => {
-                  setShowReportModal(false);
-                  setSelectedReport(null);
-                  setAdminResponse('');
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium mb-2">{selectedReport.subject}</h4>
-                <p className="text-sm text-gray-600 mb-2">
-                  From: {selectedReport.employee_email} • Priority: {selectedReport.priority} • Status: {selectedReport.status}
-                </p>
-                <p className="text-gray-700">{selectedReport.description}</p>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Your Response
-                </label>
-                <textarea
-                  value={adminResponse}
-                  onChange={(e) => setAdminResponse(e.target.value)}
-                  placeholder="Enter your response to this report..."
-                  className="w-full p-3 border border-gray-300 rounded-lg resize-none"
-                  rows={4}
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => updateReportStatus(selectedReport.id, 'in_progress', adminResponse)}
-                  disabled={updatingReport || !adminResponse.trim()}
-                  className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 disabled:bg-gray-400"
-                >
-                  {updatingReport ? 'Updating...' : 'Mark In Progress & Respond'}
-                </button>
-                <button
-                  onClick={() => updateReportStatus(selectedReport.id, 'resolved', adminResponse)}
-                  disabled={updatingReport || !adminResponse.trim()}
-                  className="flex-1 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400"
-                >
-                  {updatingReport ? 'Updating...' : 'Resolve & Respond'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Delete Member Modal */}
       {showDeleteModal && userToDelete && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
