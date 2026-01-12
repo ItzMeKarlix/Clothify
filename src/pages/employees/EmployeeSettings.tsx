@@ -8,10 +8,11 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { authService, supabase, userService } from '../../api/api';
 import toast from 'react-hot-toast';
-import { useOnboarding } from '@/hooks/use-onboarding';
+import { useOnboarding } from '../../hooks/use-onboarding';
+import OnboardingModal from '../../components/OnboardingModal';
 
 const EmployeeSettings: React.FC = () => {
-  const { completeOnboarding, needsOnboarding } = useOnboarding();
+  const { needsOnboarding, userEmail } = useOnboarding();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -68,6 +69,8 @@ const EmployeeSettings: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-7xl">
+      <OnboardingModal isOpen={needsOnboarding} userEmail={userEmail} />
+
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6">
         <SettingsIcon className="w-6 h-6 sm:w-8 sm:h-8" />
         <h1 className="text-2xl sm:text-3xl font-bold">Settings</h1>

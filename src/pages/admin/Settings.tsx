@@ -11,12 +11,12 @@ import { authService, supabase, userService } from '../../api/api';
 import toast from 'react-hot-toast';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useOnboarding } from '../../hooks/use-onboarding';
-import { ChangePasswordModal } from '@/components/ChangePasswordModal';
+import OnboardingModal from '../../components/OnboardingModal';
 
 const Settings: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { completeOnboarding, needsOnboarding } = useOnboarding();
+  const { needsOnboarding, userEmail } = useOnboarding();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -25,11 +25,8 @@ const Settings: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
 
-  const isSecurityTab = searchParams.get('tab') === 'security';
-
   const [role, setRole] = useState<string | null>(null);
   const [roleLoading, setRoleLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchRole = async () => {
@@ -51,11 +48,7 @@ const Settings: React.FC = () => {
     fetchRole();
   }, []);
 
-  useEffect(() => {
-    if (isSecurityTab && needsOnboarding) {
-      setModalOpen(true);
-    }
-  }, [isSecurityTab, needsOnboarding]);
+
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,6 +102,8 @@ const Settings: React.FC = () => {
   };
   return (
     <div className="container mx-auto px-4 py-6 max-w-7xl">
+      <OnboardingModal isOpen={needsOnboarding} userEmail={userEmail} />
+
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6">
         <SettingsIcon className="w-6 h-6 sm:w-8 sm:h-8" />
         <h1 className="text-2xl sm:text-3xl font-bold">Settings</h1>
@@ -319,9 +314,6 @@ const Settings: React.FC = () => {
                   {changingPassword ? 'Updating...' : 'Update Password'}
                 </Button>
               </form>
-
-              {/* Modal for onboarding or non-admin password updates */}
-              <ChangePasswordModal isOpen={modalOpen} onClose={() => setModalOpen(false)} requireCurrentPassword={false} redirectTo="/admin" />
             </div>
           </CardContent>
         </Card>
