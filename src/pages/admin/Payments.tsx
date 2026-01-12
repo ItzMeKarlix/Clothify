@@ -1,13 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { CreditCard, DollarSign, TrendingUp, Calendar, AlertCircle } from 'lucide-react';
+import { CreditCard, DollarSign, TrendingUp, Calendar, AlertCircle, ShoppingCart } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { paymentService } from '../../api/api';
+import { paymentService, supabase } from '../../api/api';
 import type { PaymentTransaction } from '../../types/database';
 import toast from 'react-hot-toast';
 
+interface PaymentWithOrder extends PaymentTransaction {
+  order?: {
+    id: string;
+    order_number: string;
+    total_amount: number;
+    status: string;
+    customer_email?: string;
+  };
+}
+
 const Payments: React.FC = () => {
-  const [transactions, setTransactions] = useState<PaymentTransaction[]>([]);
+  const [transactions, setTransactions] = useState<PaymentWithOrder[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [monthRevenue, setMonthRevenue] = useState(0);
   const [pendingAmount, setPendingAmount] = useState(0);
@@ -26,7 +36,28 @@ const Payments: React.FC = () => {
 
       // Fetch all transactions
       const allTransactions = await paymentService.getAll();
-      setTransactions(allTransactions);
+      
+      // Fetch orders for each transaction that has an order_id
+      const transactionsWithOrders = await Promise.all(
+        allTransactions.map(async (transaction) => {
+          let order = undefined;
+          if (transaction.order_id) {
+            try {
+              const { data: orderData } = await supabase
+                .from('orders')
+                .select('id, order_number, total_amount, status, customer_email')
+                .eq('id', transaction.order_id)
+                .single();
+              order = orderData;
+            } catch (err) {
+              console.warn(`Failed to fetch order ${transaction.order_id}:`, err);
+            }
+          }
+          return { ...transaction, order };
+        })
+      );
+
+      setTransactions(transactionsWithOrders);
 
       // Calculate revenue metrics
       const total = await paymentService.getTotalRevenue();
@@ -175,6 +206,7 @@ const Payments: React.FC = () => {
               <thead>
                 <tr className="border-b">
                   <th className="text-left p-3 text-sm font-medium">Transaction ID</th>
+                  <th className="text-left p-3 text-sm font-medium">Order</th>
                   <th className="text-left p-3 text-sm font-medium">Date</th>
                   <th className="text-left p-3 text-sm font-medium">Customer</th>
                   <th className="text-left p-3 text-sm font-medium">Amount</th>
@@ -185,7 +217,7 @@ const Payments: React.FC = () => {
               <tbody>
                 {transactions.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-6 text-center text-gray-500">
+                    <td colSpan={7} className="p-6 text-center text-gray-500">
                       No transactions found
                     </td>
                   </tr>
@@ -194,6 +226,19 @@ const Payments: React.FC = () => {
                     <tr key={transaction.id} className="border-b hover:bg-muted/50">
                       <td className="p-3">
                         <span className="font-mono text-sm">{transaction.id.slice(-8)}</span>
+                      </td>
+                      <td className="p-3">
+                        {transaction.order ? (
+                          <div className="flex items-center gap-2">
+                            <ShoppingCart className="w-4 h-4 text-blue-600" />
+                            <div>
+                              <div className="font-medium text-sm">#{transaction.order.order_number}</div>
+                              <div className="text-xs text-gray-500">${transaction.order.total_amount.toFixed(2)}</div>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400">No order</span>
+                        )}
                       </td>
                       <td className="p-3">
                         <div className="flex items-center gap-2">

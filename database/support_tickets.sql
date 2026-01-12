@@ -71,8 +71,9 @@ CREATE INDEX IF NOT EXISTS idx_ticket_attachments_ticket_id ON ticket_attachment
 CREATE TABLE IF NOT EXISTS user_roles (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    role VARCHAR(20) NOT NULL CHECK (role IN ('admin', 'employee')),
+    role VARCHAR(20) NOT NULL CHECK (role IN ('admin', 'employee', 'customer')),
     name VARCHAR(255),
+    onboarding_completed BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(user_id)
@@ -87,11 +88,16 @@ ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
 
 -- RLS policies for user_roles
 DROP POLICY IF EXISTS "Users can view their own role" ON user_roles;
+DROP POLICY IF EXISTS "Users can update their own name" ON user_roles;
 DROP POLICY IF EXISTS "Admins can view all roles" ON user_roles;
 DROP POLICY IF EXISTS "Admins can manage roles" ON user_roles;
 
 CREATE POLICY "Users can view their own role" ON user_roles
     FOR SELECT USING (user_id = auth.uid());
+
+CREATE POLICY "Users can update their own name" ON user_roles
+    FOR UPDATE USING (user_id = auth.uid())
+    WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY "Admins can view all roles" ON user_roles
     FOR SELECT USING (
@@ -104,6 +110,13 @@ CREATE POLICY "Admins can view all roles" ON user_roles
 
 CREATE POLICY "Admins can manage roles" ON user_roles
     FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM user_roles
+            WHERE user_id = auth.uid()
+            AND role = 'admin'
+        )
+    )
+    WITH CHECK (
         EXISTS (
             SELECT 1 FROM user_roles
             WHERE user_id = auth.uid()
@@ -124,28 +137,8 @@ SELECT
 FROM user_roles ur
 JOIN auth.users au ON ur.user_id = au.id;
 
--- Enable RLS on the view
-ALTER VIEW user_details SET (security_barrier = true);
-ALTER VIEW user_details ENABLE ROW LEVEL SECURITY;
-
--- Grant access to authenticated users (RLS will control access)
+-- Grant access to authenticated users (RLS will control access on underlying tables)
 GRANT SELECT ON user_details TO authenticated;
-
--- RLS policies for user_details view
-DROP POLICY IF EXISTS "Admins can view all user info" ON user_details;
-DROP POLICY IF EXISTS "Users can view their own info" ON user_details;
-
-CREATE POLICY "Admins can view all user info" ON user_details
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM user_roles
-            WHERE user_id = auth.uid()
-            AND role IN ('admin', 'employee')
-        )
-    );
-
-CREATE POLICY "Users can view their own info" ON user_details
-    FOR SELECT USING (user_id = auth.uid());
 
 -- Row Level Security (RLS) Policies
 
@@ -182,6 +175,12 @@ CREATE POLICY "Admins and employees can manage tickets" ON support_tickets
             SELECT 1 FROM public.user_roles
             WHERE user_id = auth.uid() AND role IN ('admin', 'employee')
         )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.user_roles
+            WHERE user_id = auth.uid() AND role IN ('admin', 'employee')
+        )
     );
 
 -- Ticket responses policies
@@ -206,6 +205,12 @@ CREATE POLICY "Admins and employees can manage responses" ON ticket_responses
             SELECT 1 FROM public.user_roles
             WHERE user_id = auth.uid() AND role IN ('admin', 'employee')
         )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.user_roles
+            WHERE user_id = auth.uid() AND role IN ('admin', 'employee')
+        )
     );
 
 -- Ticket attachments policies
@@ -226,6 +231,12 @@ CREATE POLICY "Users can view attachments to their tickets" ON ticket_attachment
 DROP POLICY IF EXISTS "Admins and employees can manage attachments" ON ticket_attachments;
 CREATE POLICY "Admins and employees can manage attachments" ON ticket_attachments
     FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM public.user_roles
+            WHERE user_id = auth.uid() AND role IN ('admin', 'employee')
+        )
+    )
+    WITH CHECK (
         EXISTS (
             SELECT 1 FROM public.user_roles
             WHERE user_id = auth.uid() AND role IN ('admin', 'employee')
@@ -270,6 +281,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to auto-generate ticket numbers
+DROP TRIGGER IF EXISTS trigger_generate_ticket_number ON support_tickets;
 CREATE TRIGGER trigger_generate_ticket_number
     BEFORE INSERT ON support_tickets
     FOR EACH ROW
@@ -277,11 +289,13 @@ CREATE TRIGGER trigger_generate_ticket_number
     EXECUTE FUNCTION generate_ticket_number();
 
 -- Triggers to update timestamps
+DROP TRIGGER IF EXISTS trigger_update_ticket_timestamp ON support_tickets;
 CREATE TRIGGER trigger_update_ticket_timestamp
     BEFORE UPDATE ON support_tickets
     FOR EACH ROW
     EXECUTE FUNCTION update_ticket_updated_at();
 
+DROP TRIGGER IF EXISTS trigger_update_response_timestamp ON ticket_responses;
 CREATE TRIGGER trigger_update_response_timestamp
     BEFORE UPDATE ON ticket_responses
     FOR EACH ROW

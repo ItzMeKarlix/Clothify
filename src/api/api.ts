@@ -196,6 +196,23 @@ export const orderService = {
     if (error) throw error;
     if (!data) throw new Error('Failed to create order');
 
+    // Create associated payment transaction
+    try {
+      await paymentService.create({
+        order_id: data.id,
+        amount: data.total_amount,
+        currency: 'USD',
+        payment_method: 'pending',
+        status: 'pending',
+        customer_id: data.customer_id,
+        customer_email: data.customer_email,
+        customer_name: data.customer_name
+      });
+    } catch (paymentErr) {
+      console.error('Failed to create payment transaction for order:', paymentErr);
+      // Continue even if payment creation fails - the order was created successfully
+    }
+
     return data;
   },
 
