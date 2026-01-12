@@ -1,10 +1,55 @@
-import React, { useState } from 'react';
-import { AlertTriangle, Lock, User, Eye, EyeOff } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { AlertTriangle, Lock, User, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import toast from 'react-hot-toast';
 import { authService, supabase } from '@/api/api';
 import { useNavigate } from 'react-router-dom';
+
+// Password strength checker
+const getPasswordStrength = (password: string) => {
+  let strength = 0;
+  const feedback: string[] = [];
+
+  if (!password) return { strength: 0, feedback: ['Enter a password'], color: 'gray', label: 'None' };
+
+  if (password.length >= 8) strength++;
+  else feedback.push('At least 8 characters');
+
+  if (password.length >= 12) strength++;
+  else if (password.length >= 8) feedback.push('12+ characters for stronger password');
+
+  if (/[a-z]/.test(password)) strength++;
+  else feedback.push('Add lowercase letters');
+
+  if (/[A-Z]/.test(password)) strength++;
+  else feedback.push('Add uppercase letters');
+
+  if (/[0-9]/.test(password)) strength++;
+  else feedback.push('Add numbers');
+
+  if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) strength++;
+  else feedback.push('Add special characters');
+
+  let color = 'red';
+  let label = 'Weak';
+
+  if (strength <= 2) {
+    color = 'red';
+    label = 'Weak';
+  } else if (strength <= 4) {
+    color = 'yellow';
+    label = 'Fair';
+  } else if (strength <= 5) {
+    color = 'blue';
+    label = 'Good';
+  } else {
+    color = 'green';
+    label = 'Strong';
+  }
+
+  return { strength, feedback, color, label };
+};
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -23,6 +68,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, userEm
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const passwordStrength = useMemo(() => getPasswordStrength(newPassword), [newPassword]);
+  const isPasswordValid = passwordStrength.strength >= 3; // At least "Fair" strength
+
   if (!isOpen) {
     return null;
   }
@@ -35,6 +83,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, userEm
       return;
     }
 
+    if (!isPasswordValid) {
+      toast.error(`Password is too weak. ${passwordStrength.feedback[0]}`);
+      return;
+    }
+
     if (!newPassword || !confirmPassword) {
       toast.error('Please provide a new password and confirm it');
       return;
@@ -42,11 +95,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, userEm
 
     if (newPassword !== confirmPassword) {
       toast.error('Passwords do not match');
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      toast.error('Password must be at least 8 characters');
       return;
     }
 
@@ -185,6 +233,63 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, userEm
                 {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
+
+            {/* Password Strength Meter */}
+            {newPassword && (
+              <div className="space-y-2">
+                <div className="flex gap-1">
+                  {[...Array(6)].map((_, i) => (
+                    <div
+                      key={i}
+                      className={`h-1.5 flex-1 rounded-full transition-colors ${
+                        i < passwordStrength.strength
+                          ? passwordStrength.color === 'red'
+                            ? 'bg-red-500'
+                            : passwordStrength.color === 'yellow'
+                            ? 'bg-yellow-500'
+                            : passwordStrength.color === 'blue'
+                            ? 'bg-blue-500'
+                            : 'bg-green-500'
+                          : 'bg-gray-200'
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-medium ${
+                    passwordStrength.color === 'red'
+                      ? 'text-red-600'
+                      : passwordStrength.color === 'yellow'
+                      ? 'text-yellow-600'
+                      : passwordStrength.color === 'blue'
+                      ? 'text-blue-600'
+                      : 'text-green-600'
+                  }`}>
+                    Strength: {passwordStrength.label}
+                  </span>
+                </div>
+
+                {/* Password Requirements */}
+                {passwordStrength.feedback.length > 0 && (
+                  <div className="bg-gray-50 p-3 rounded border border-gray-200 space-y-1">
+                    {passwordStrength.feedback.map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-xs text-gray-600">
+                        <AlertCircle className="h-3 w-3 text-amber-500 flex-shrink-0" />
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {isPasswordValid && (
+                  <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 p-2 rounded border border-green-200">
+                    <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                    <span>Password is strong enough!</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Confirm Password Field */}
@@ -223,8 +328,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, userEm
             </Button>
             <Button 
               type="submit" 
-              className="bg-blue-600 hover:bg-blue-700"
-              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              disabled={loading || !username.trim() || !isPasswordValid || newPassword !== confirmPassword}
             >
               {loading ? 'Setting up...' : 'Complete Setup'}
             </Button>
