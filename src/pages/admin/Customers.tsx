@@ -574,7 +574,7 @@ const Customers: React.FC = () => {
                           
                           // If employee doesn't exist, unassign the ticket
                           if (!assignedEmployee && ticket.assigned_to) {
-                            supportTicketService.assignTicket(ticket.id, null).catch(err => {
+                            supportTicketService.assignTicket(ticket.id, '').catch(err => {
                               console.error('Error unassigning ticket:', err);
                             });
                           }
@@ -708,104 +708,104 @@ const Customers: React.FC = () => {
             </div>
 
             {ticketDetails.ticket && (
-              <div className="p-6 flex-1 overflow-y-auto w-full">
-                <div>
+              <ScrollArea className="flex-1 w-full min-h-0">
+                <div className="p-6 space-y-4">
                   {/* Details Section */}
                   <div className="shrink-0">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">Ticket Information</h4>
-                    <div className="bg-gray-50 rounded p-4 space-y-4">
-                      <div>
-                        <label className="text-xs font-medium text-gray-500">Subject</label>
-                        <p className="text-sm font-semibold mt-1">{ticketDetails.ticket.subject}</p>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-500">Ticket Number</label>
-                        <p className="text-sm mt-1">#{ticketDetails.ticket.ticket_number}</p>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-500">Customer Email</label>
-                        <p className="text-sm mt-1">{ticketDetails.ticket.customer_email}</p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-3">Ticket Information</h4>
+                      <div className="bg-gray-50 rounded p-4 space-y-4">
                         <div>
-                          <label className="text-xs font-medium text-gray-500">Status</label>
-                          <Badge variant={
-                            ticketDetails.ticket.status === 'open' ? 'destructive' :
-                            ticketDetails.ticket.status === 'in-progress' ? 'default' :
-                            ticketDetails.ticket.status === 'waiting-for-customer' ? 'outline' :
-                            ticketDetails.ticket.status === 'resolved' ? 'secondary' :
-                            'outline'
-                          } className="mt-1">
-                            {ticketDetails.ticket.status.replace('-', ' ')}
-                          </Badge>
+                          <label className="text-xs font-medium text-gray-500">Subject</label>
+                          <p className="text-sm font-semibold mt-1">{ticketDetails.ticket.subject}</p>
                         </div>
                         <div>
-                          <label className="text-xs font-medium text-gray-500">Priority</label>
-                          <Badge variant="outline" className="text-xs mt-1">
-                            {ticketDetails.ticket.priority.toUpperCase()}
-                          </Badge>
+                          <label className="text-xs font-medium text-gray-500">Ticket Number</label>
+                          <p className="text-sm mt-1">#{ticketDetails.ticket.ticket_number}</p>
                         </div>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-500">Created</label>
-                        <p className="text-sm mt-1">{new Date(ticketDetails.ticket.created_at).toLocaleString()}</p>
-                      </div>
-                      {ticketDetails.ticket.resolved_at && (
                         <div>
-                          <label className="text-xs font-medium text-gray-500">Resolved</label>
-                          <p className="text-sm mt-1">{new Date(ticketDetails.ticket.resolved_at).toLocaleString()}</p>
+                          <label className="text-xs font-medium text-gray-500">Customer Email</label>
+                          <p className="text-sm mt-1">{ticketDetails.ticket.customer_email}</p>
                         </div>
-                      )}
-                      <div>
-                        <label className="text-xs font-medium text-gray-500">Assigned To</label>
-                        {ticketDetails.ticket.assigned_to_email ? (
-                          <p className="text-sm mt-1">{ticketDetails.ticket.assigned_to_email}</p>
-                        ) : (
-                          <p className="text-sm text-gray-500 mt-1">Unassigned</p>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-xs font-medium text-gray-500">Status</label>
+                            <Badge variant={
+                              ticketDetails.ticket.status === 'open' ? 'destructive' :
+                              ticketDetails.ticket.status === 'in-progress' ? 'default' :
+                              ticketDetails.ticket.status === 'waiting-for-customer' ? 'outline' :
+                              ticketDetails.ticket.status === 'resolved' ? 'secondary' :
+                              'outline'
+                            } className="mt-1">
+                              {ticketDetails.ticket.status.replace('-', ' ')}
+                            </Badge>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-gray-500">Priority</label>
+                            <Badge variant="outline" className="text-xs mt-1">
+                              {ticketDetails.ticket.priority.toUpperCase()}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-gray-500">Created</label>
+                          <p className="text-sm mt-1">{new Date(ticketDetails.ticket.created_at).toLocaleString()}</p>
+                        </div>
+                        {ticketDetails.ticket.resolved_at && (
+                          <div>
+                            <label className="text-xs font-medium text-gray-500">Resolved</label>
+                            <p className="text-sm mt-1">{new Date(ticketDetails.ticket.resolved_at).toLocaleString()}</p>
+                          </div>
                         )}
-                      </div>
-                      <div className="border-t pt-4">
-                        <label className="text-xs font-medium text-gray-500 block mb-2">Description</label>
-                        <p className="text-sm whitespace-pre-line text-gray-700 bg-white p-3 rounded border border-gray-200">{ticketDetails.ticket.description}</p>
+                        <div>
+                          <label className="text-xs font-medium text-gray-500">Assigned To</label>
+                          {ticketDetails.ticket.assigned_to_email ? (
+                            <p className="text-sm mt-1">{ticketDetails.ticket.assigned_to_email}</p>
+                          ) : (
+                            <p className="text-sm text-gray-500 mt-1">Unassigned</p>
+                          )}
+                        </div>
+                        <div className="border-t pt-4">
+                          <label className="text-xs font-medium text-gray-500 block mb-2">Description</label>
+                          <p className="text-sm whitespace-pre-line text-gray-700 bg-white p-3 rounded border border-gray-200">{ticketDetails.ticket.description}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Action Buttons */}
-                  <div className="mt-6 flex gap-3">
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setRespondModal({
-                          ticket: ticketDetails.ticket,
-                          response: '',
-                          responses: ticketDetails.responses
-                        });
-                        setTicketDetails(null);
-                      }}
-                    >
-                      <MessageSquare className="w-4 h-4 mr-1" />
-                      Respond
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleMarkResolved(ticketDetails.ticket!)}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-1" />
-                      Resolve
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleAssignTicket(ticketDetails.ticket!)}
-                    >
-                      <UserCheck className="w-4 h-4 mr-1" />
-                      Assign
-                    </Button>
+                    {/* Action Buttons */}
+                    <div className="mt-6 flex gap-3">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setRespondModal({
+                            ticket: ticketDetails.ticket,
+                            response: '',
+                            responses: ticketDetails.responses
+                          });
+                          setTicketDetails(null);
+                        }}
+                      >
+                        <MessageSquare className="w-4 h-4 mr-1" />
+                        Respond
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleMarkResolved(ticketDetails.ticket!)}
+                      >
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Resolve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleAssignTicket(ticketDetails.ticket!)}
+                      >
+                        <UserCheck className="w-4 h-4 mr-1" />
+                        Assign
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </ScrollArea>
             )}
           </div>
         </div>
@@ -814,7 +814,7 @@ const Customers: React.FC = () => {
       {/* Ticket History Modal - Resolved/Closed Tickets */}
       {ticketDetails && ticketDetails.ticket && (ticketDetails.ticket.status === 'resolved' || ticketDetails.ticket.status === 'closed') ? (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 z-10 flex flex-col">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 h-[85vh] z-10 overflow-hidden flex flex-col">
             <div className="p-6 border-b border-gray-200 flex items-start justify-between shrink-0">
               <div>
                 <h3 className="text-xl font-semibold">Ticket #{ticketDetails.ticket?.ticket_number} - {ticketDetails.ticket?.subject}</h3>
@@ -829,66 +829,66 @@ const Customers: React.FC = () => {
             </div>
 
             {ticketDetails.ticket && (
-              <div className="p-6 flex-1 w-full">
-                <div>
+              <ScrollArea className="flex-1 w-full min-h-0">
+                <div className="p-6 space-y-4">
                   {/* Details Section */}
                   <div>
                     <h4 className="text-sm font-medium text-gray-700 mb-3">Ticket Information</h4>
                     <div className="bg-gray-50 rounded p-4 space-y-4">
-                      <div>
-                        <label className="text-xs font-medium text-gray-500">Subject</label>
-                        <p className="text-sm font-semibold mt-1">{ticketDetails.ticket.subject}</p>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-500">Ticket Number</label>
-                        <p className="text-sm mt-1">#{ticketDetails.ticket.ticket_number}</p>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-500">Customer Email</label>
-                        <p className="text-sm mt-1">{ticketDetails.ticket.customer_email}</p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="text-xs font-medium text-gray-500">Status</label>
-                          <Badge variant={
-                            ticketDetails.ticket.status === 'resolved' ? 'secondary' : 'outline'
-                          } className="mt-1">
-                            {ticketDetails.ticket.status.replace('-', ' ')}
-                          </Badge>
+                          <label className="text-xs font-medium text-gray-500">Subject</label>
+                          <p className="text-sm font-semibold mt-1">{ticketDetails.ticket.subject}</p>
                         </div>
                         <div>
-                          <label className="text-xs font-medium text-gray-500">Priority</label>
-                          <Badge variant="outline" className="text-xs mt-1">
-                            {ticketDetails.ticket.priority.toUpperCase()}
-                          </Badge>
+                          <label className="text-xs font-medium text-gray-500">Ticket Number</label>
+                          <p className="text-sm mt-1">#{ticketDetails.ticket.ticket_number}</p>
                         </div>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-500">Created</label>
-                        <p className="text-sm mt-1">{new Date(ticketDetails.ticket.created_at).toLocaleString()}</p>
-                      </div>
-                      {ticketDetails.ticket.resolved_at && (
                         <div>
-                          <label className="text-xs font-medium text-gray-500">Resolved</label>
-                          <p className="text-sm mt-1">{new Date(ticketDetails.ticket.resolved_at).toLocaleString()}</p>
+                          <label className="text-xs font-medium text-gray-500">Customer Email</label>
+                          <p className="text-sm mt-1">{ticketDetails.ticket.customer_email}</p>
                         </div>
-                      )}
-                      <div>
-                        <label className="text-xs font-medium text-gray-500">Assigned To</label>
-                        {ticketDetails.ticket.assigned_to_email ? (
-                          <p className="text-sm mt-1">{ticketDetails.ticket.assigned_to_email}</p>
-                        ) : (
-                          <p className="text-sm text-gray-500 mt-1">Unassigned</p>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-xs font-medium text-gray-500">Status</label>
+                            <Badge variant={
+                              ticketDetails.ticket.status === 'resolved' ? 'secondary' : 'outline'
+                            } className="mt-1">
+                              {ticketDetails.ticket.status.replace('-', ' ')}
+                            </Badge>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-gray-500">Priority</label>
+                            <Badge variant="outline" className="text-xs mt-1">
+                              {ticketDetails.ticket.priority.toUpperCase()}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-gray-500">Created</label>
+                          <p className="text-sm mt-1">{new Date(ticketDetails.ticket.created_at).toLocaleString()}</p>
+                        </div>
+                        {ticketDetails.ticket.resolved_at && (
+                          <div>
+                            <label className="text-xs font-medium text-gray-500">Resolved</label>
+                            <p className="text-sm mt-1">{new Date(ticketDetails.ticket.resolved_at).toLocaleString()}</p>
+                          </div>
                         )}
-                      </div>
-                      <div className="border-t pt-4">
-                        <label className="text-xs font-medium text-gray-500 block mb-2">Description</label>
-                        <p className="text-sm whitespace-pre-line text-gray-700 bg-white p-3 rounded border border-gray-200">{ticketDetails.ticket.description}</p>
+                        <div>
+                          <label className="text-xs font-medium text-gray-500">Assigned To</label>
+                          {ticketDetails.ticket.assigned_to_email ? (
+                            <p className="text-sm mt-1">{ticketDetails.ticket.assigned_to_email}</p>
+                          ) : (
+                            <p className="text-sm text-gray-500 mt-1">Unassigned</p>
+                          )}
+                        </div>
+                        <div className="border-t pt-4">
+                          <label className="text-xs font-medium text-gray-500 block mb-2">Description</label>
+                          <p className="text-sm whitespace-pre-line text-gray-700 bg-white p-3 rounded border border-gray-200">{ticketDetails.ticket.description}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
+                </ScrollArea>
             )}
           </div>
         </div>
@@ -917,11 +917,11 @@ const Customers: React.FC = () => {
                 <div className="mt-4 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium">{respondModal.ticket.subject}</p>
-                    <p className="text-xs text-gray-500">#{respondModal.ticket.ticket_number} • {respondModal.ticket.customer_email}</p>
+                    <p className="text-xs text-gray-500">#{respondModal.ticket?.ticket_number} • {respondModal.ticket?.customer_email}</p>
                   </div>
-                  {respondModal.ticket.assigned_to ? (() => {
-                    const assignedEmployee = employees.find(emp => emp.user_id === respondModal.ticket.assigned_to);
-                    const employeeName = assignedEmployee ? (assignedEmployee.customer_name || assignedEmployee.email) : respondModal.ticket.assigned_to_email;
+                  {respondModal.ticket?.assigned_to ? (() => {
+                    const assignedEmployee = employees.find(emp => emp.user_id === respondModal.ticket?.assigned_to);
+                    const employeeName = assignedEmployee ? (assignedEmployee.customer_name || assignedEmployee.email) : respondModal.ticket?.assigned_to_email;
                     return (
                       <div className="flex items-center gap-2">
                         <UserCheck className="h-4 w-4 text-blue-600" />
@@ -1074,9 +1074,9 @@ const Customers: React.FC = () => {
                   </div>
 
                   {/* Current Assignment Status */}
-                  {assignModal.ticket.assigned_to ? (() => {
-                    const assignedEmployee = employees.find(emp => emp.user_id === assignModal.ticket.assigned_to);
-                    const employeeName = assignedEmployee ? (assignedEmployee.customer_name || assignedEmployee.email) : assignModal.ticket.assigned_to_email;
+                  {assignModal.ticket?.assigned_to ? (() => {
+                    const assignedEmployee = employees.find(emp => emp.user_id === assignModal.ticket?.assigned_to);
+                    const employeeName = assignedEmployee ? (assignedEmployee.customer_name || assignedEmployee.email) : assignModal.ticket?.assigned_to_email;
                     return (
                       <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
                         <div className="flex items-center gap-2">
@@ -1114,7 +1114,7 @@ const Customers: React.FC = () => {
                     </label>
                     <Select
                       value={assignModal.assigneeId}
-                      onValueChange={(value) => setAssignModal({...assignModal, assigneeId: value})}
+                      onValueChange={(value: string) => setAssignModal({...assignModal, assigneeId: value})}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue 

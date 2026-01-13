@@ -4,6 +4,12 @@ import { SupportTicketCategory, SupportTicket } from '../../types/database';
 import { MessageSquare, AlertCircle, CheckCircle, Clock, User } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
+declare global {
+  interface Window {
+    turnstile: any;
+  }
+}
+
 const ContactUs: React.FC = () => {
   const [formData, setFormData] = useState({
     firstName: '',
@@ -26,10 +32,32 @@ const ContactUs: React.FC = () => {
   const [ticketsError, setTicketsError] = useState<string | null>(null);
   const [emailForTickets, setEmailForTickets] = useState('');
   const [emailSubmitted, setEmailSubmitted] = useState(false);
+  const [captchaModalOpen, setCaptchaModalOpen] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaError, setCaptchaError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  // Load Turnstile script only when modal opens
+  useEffect(() => {
+    if (!captchaModalOpen) return;
+
+    let mounted = true;
+    (async () => {
+      try {
+        const { loadTurnstileScript, initializeTurnstile } = await import('../../utils/auth');
+        await loadTurnstileScript();
+        if (!mounted) return;
+        await initializeTurnstile('captcha-modal-container');
+      } catch (err) {
+        console.warn('Turnstile setup error:', err);
+        if (mounted) setCaptchaError('Failed to load CAPTCHA. Please try again.');
+      }
+    })();
+    return () => { mounted = false; };
+  }, [captchaModalOpen]);
 
   useEffect(() => {
     if (activeTab === 'view') {
@@ -204,17 +232,43 @@ const ContactUs: React.FC = () => {
       return;
     }
 
-    setLoading(true);
-    setSubmitError(null);
+    // Open CAPTCHA modal - don't submit yet
+    setCaptchaModalOpen(true);
+    setCaptchaError(null);
+  };
 
+  // Handle CAPTCHA verification and ticket submission
+  const handleCaptchaSubmit = async () => {
     try {
+      // Verify CAPTCHA
+      if (!window.turnstile) {
+        setCaptchaError('CAPTCHA not loaded. Please refresh and try again.');
+        return;
+      }
+      const token = window.turnstile.getResponse();
+      if (!token) {
+        setCaptchaError('Please complete the CAPTCHA verification');
+        return;
+      }
+
+      setCaptchaToken(token);
+      setLoading(true);
+      setSubmitError(null);
+
       // Customer info (always derived from the submitted form for public contact page)
       let customerId: string | null = null;
       let customerEmail = formData.email;
       let customerName = `${formData.firstName} ${formData.lastName}`.trim();
 
-      // Prepare ticket data - keep it simple
+      // Generate ticket number: TICK-YYYYMMDD-XXXXX (e.g., TICK-20240114-12345)
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0].replace(/-/g, '');
+      const randomNum = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
+      const ticketNumber = `TICK-${dateStr}-${randomNum}`;
+
+      // Prepare ticket data
       const ticketData = {
+        ticket_number: ticketNumber,
         customer_id: customerId,
         customer_email: customerEmail,
         customer_name: customerName,
@@ -245,15 +299,17 @@ const ContactUs: React.FC = () => {
 
       console.log('Ticket created successfully:', data);
 
-      // Handle file upload if present
-      if (file) {
+      // Handle file upload if present and user is authenticated
+      if (file && customerId) {
         try {
-          await supportTicketAttachmentService.uploadAttachment(data.id, file, customerId || 'anonymous');
+          await supportTicketAttachmentService.uploadAttachment(data.id, file, customerId);
         } catch (uploadError) {
           console.error('File upload error:', uploadError);
           setSubmitError('Ticket created successfully, but file upload failed.');
           return;
         }
+      } else if (file && !customerId) {
+        console.warn('File not uploaded: Anonymous users cannot upload files to support tickets');
       }
 
       setSubmitSuccess(true);
@@ -278,11 +334,16 @@ const ContactUs: React.FC = () => {
         message: '',
       });
       setFile(null);
+      setCaptchaToken(null);
+      window.turnstile?.reset();
+      setCaptchaModalOpen(false);
 
     } catch (error) {
       console.error('Submit error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       setSubmitError(`Failed to submit ticket: ${errorMessage}`);
+      setCaptchaToken(null);
+      window.turnstile?.reset();
     } finally {
       setLoading(false);
     }
@@ -429,14 +490,19 @@ const ContactUs: React.FC = () => {
           name="message"
           placeholder="Your Message"
           rows={5}
+          maxLength={2000}
           onChange={handleInputChange}
+          value={formData.message}
           className="w-full p-3 border border-gray-300 rounded-md"
           required
         ></textarea>
-        <div>
-          <label htmlFor="file" className="block text-sm font-medium text-gray-700">
+        <div className="flex justify-between items-center mt-2 mb-4">
+          <label htmlFor="file" className="text-sm font-medium text-gray-700">
             Attach an image (optional, max 50MB)
           </label>
+          <p className="text-sm text-gray-500">{formData.message.length}/2000</p>
+        </div>
+        <div>
           <input
             type="file"
             name="file"
@@ -447,6 +513,7 @@ const ContactUs: React.FC = () => {
           />
           {fileError && <p className="text-red-500 text-sm mt-1">{fileError}</p>}
         </div>
+
         <button
           type="submit"
           disabled={loading}
@@ -641,11 +708,13 @@ const ContactUs: React.FC = () => {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
                             {/* Left Column - Conversation */}
                             <div className="flex flex-col h-full min-h-0">
-                              <div className="flex-shrink-0">
-                                <h4 className="text-sm font-medium text-gray-700 mb-2">Details</h4>
-                                <div className="bg-gray-50 rounded p-4">
-                                  <p className="text-gray-700 whitespace-pre-line">{selectedTicket.description}</p>
-                                </div>
+                              <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                                <h4 className="text-sm font-medium text-gray-700 mb-2 flex-shrink-0">Details</h4>
+                                <ScrollArea className="flex-1 rounded bg-gradient-to-b from-white to-gray-50 min-h-0">
+                                  <div className="p-4">
+                                    <p className="text-gray-700 whitespace-pre-line">{selectedTicket.description}</p>
+                                  </div>
+                                </ScrollArea>
                               </div>
 
                               <div className="flex-1 overflow-hidden flex flex-col min-h-0 mt-4">
@@ -725,6 +794,47 @@ const ContactUs: React.FC = () => {
             </>
           )}
         </>
+      )}
+
+      {/* CAPTCHA Modal */}
+      {captchaModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-sm w-full p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Verify You're Human</h2>
+            <p className="text-sm text-gray-600 mb-6">Please complete the CAPTCHA verification to proceed with submitting your support ticket.</p>
+            
+            {captchaError && (
+              <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded text-red-700 text-sm">
+                {captchaError}
+              </div>
+            )}
+
+            {/* Turnstile CAPTCHA Container */}
+            <div id="captcha-modal-container" className="flex justify-center mb-6"></div>
+
+            {/* Modal Buttons */}
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setCaptchaModalOpen(false);
+                  setCaptchaError(null);
+                  window.turnstile?.reset();
+                }}
+                disabled={loading}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCaptchaSubmit}
+                disabled={loading}
+                className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Submitting...' : 'Verify & Submit'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
