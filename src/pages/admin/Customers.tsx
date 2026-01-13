@@ -571,7 +571,29 @@ const Customers: React.FC = () => {
                         {/* Assignee Information */}
                         {ticket.assigned_to ? (() => {
                           const assignedEmployee = employees.find(emp => emp.user_id === ticket.assigned_to);
-                          const employeeName = assignedEmployee ? (assignedEmployee.customer_name || assignedEmployee.email) : 'Employee';
+                          
+                          // If employee doesn't exist, unassign the ticket
+                          if (!assignedEmployee && ticket.assigned_to) {
+                            supportTicketService.assignTicket(ticket.id, null).catch(err => {
+                              console.error('Error unassigning ticket:', err);
+                            });
+                          }
+                          
+                          // Show unassigned if employee doesn't exist
+                          if (!assignedEmployee) {
+                            return (
+                              <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-md">
+                                <div className="flex items-center gap-2">
+                                  <AlertTriangle className="h-4 w-4 text-orange-600" />
+                                  <span className="text-xs font-medium text-orange-900">
+                                    Unassigned - Available for assignment
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          }
+                          
+                          const employeeName = assignedEmployee.customer_name || assignedEmployee.email;
                           return (
                             <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-md">
                               <div className="flex items-center gap-2">
@@ -897,10 +919,19 @@ const Customers: React.FC = () => {
                     <p className="text-sm font-medium">{respondModal.ticket.subject}</p>
                     <p className="text-xs text-gray-500">#{respondModal.ticket.ticket_number} • {respondModal.ticket.customer_email}</p>
                   </div>
-                  {respondModal.ticket.assigned_to_email && (
+                  {respondModal.ticket.assigned_to ? (() => {
+                    const assignedEmployee = employees.find(emp => emp.user_id === respondModal.ticket.assigned_to);
+                    const employeeName = assignedEmployee ? (assignedEmployee.customer_name || assignedEmployee.email) : respondModal.ticket.assigned_to_email;
+                    return (
+                      <div className="flex items-center gap-2">
+                        <UserCheck className="h-4 w-4 text-blue-600" />
+                        <span className="text-xs text-blue-700">Assigned to: {employeeName}</span>
+                      </div>
+                    );
+                  })() : (
                     <div className="flex items-center gap-2">
-                      <UserCheck className="h-4 w-4 text-blue-600" />
-                      <span className="text-xs text-blue-700">{respondModal.ticket.assigned_to_email}</span>
+                      <AlertTriangle className="h-4 w-4 text-orange-600" />
+                      <span className="text-xs text-orange-700">Unassigned</span>
                     </div>
                   )}
                 </div>
@@ -981,11 +1012,22 @@ const Customers: React.FC = () => {
                 <div className="p-3 bg-gray-50 rounded-md">
                   <p className="text-sm font-medium">{confirmResolve.subject}</p>
                   <p className="text-xs text-gray-500">#{confirmResolve.ticket_number} • {confirmResolve.customer_email}</p>
-                  {confirmResolve.assigned_to_email && (
+                  {confirmResolve.assigned_to ? (() => {
+                    const assignedEmployee = employees.find(emp => emp.user_id === confirmResolve.assigned_to);
+                    const employeeName = assignedEmployee ? (assignedEmployee.customer_name || assignedEmployee.email) : confirmResolve.assigned_to_email;
+                    return (
+                      <div className="mt-2 flex items-center gap-2">
+                        <UserCheck className="h-3 w-3 text-blue-600" />
+                        <span className="text-xs text-blue-700">
+                          Assigned to: {employeeName}
+                        </span>
+                      </div>
+                    );
+                  })() : (
                     <div className="mt-2 flex items-center gap-2">
-                      <UserCheck className="h-3 w-3 text-blue-600" />
-                      <span className="text-xs text-blue-700">
-                        Assigned to: {confirmResolve.assigned_to_email}
+                      <AlertTriangle className="h-3 w-3 text-orange-600" />
+                      <span className="text-xs text-orange-700">
+                        Unassigned
                       </span>
                     </div>
                   )}
@@ -1032,21 +1074,25 @@ const Customers: React.FC = () => {
                   </div>
 
                   {/* Current Assignment Status */}
-                  {assignModal.ticket.assigned_to_email ? (
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-                      <div className="flex items-center gap-2">
-                        <UserCheck className="h-4 w-4 text-blue-600" />
-                        <div>
-                          <p className="text-xs font-medium text-blue-900">
-                            Currently assigned to: {assignModal.ticket.assigned_to_email}
-                          </p>
-                          <p className="text-xs text-blue-700">
-                            This will reassign the ticket to a different user
-                          </p>
+                  {assignModal.ticket.assigned_to ? (() => {
+                    const assignedEmployee = employees.find(emp => emp.user_id === assignModal.ticket.assigned_to);
+                    const employeeName = assignedEmployee ? (assignedEmployee.customer_name || assignedEmployee.email) : assignModal.ticket.assigned_to_email;
+                    return (
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                        <div className="flex items-center gap-2">
+                          <UserCheck className="h-4 w-4 text-blue-600" />
+                          <div>
+                            <p className="text-xs font-medium text-blue-900">
+                              Currently assigned to: {employeeName}
+                            </p>
+                            <p className="text-xs text-blue-700">
+                              This will reassign the ticket to a different user
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ) : (
+                    );
+                  })() : (
                     <div className="p-3 bg-orange-50 border border-orange-200 rounded-md">
                       <div className="flex items-center gap-2">
                         <AlertTriangle className="h-4 w-4 text-orange-600" />
@@ -1071,7 +1117,14 @@ const Customers: React.FC = () => {
                       onValueChange={(value) => setAssignModal({...assignModal, assigneeId: value})}
                     >
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select an employee..." />
+                        <SelectValue 
+                          placeholder="Select an employee..."
+                        >
+                          {assignModal.assigneeId && (() => {
+                            const selectedEmp = employees.find(emp => emp.user_id === assignModal.assigneeId);
+                            return selectedEmp ? (selectedEmp.customer_name || selectedEmp.email) : 'Select an employee...';
+                          })()}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {employees.length === 0 ? (

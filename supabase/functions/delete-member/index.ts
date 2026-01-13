@@ -39,6 +39,19 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // First, unassign all tickets from this employee
+    const { error: unassignError } = await supabase
+      .from("support_tickets")
+      .update({ assigned_to: null })
+      .eq("assigned_to", userId);
+    
+    if (unassignError) {
+      console.warn("Failed to unassign tickets:", unassignError);
+      // Continue with deletion even if unassign fails
+    } else {
+      console.log(`Unassigned all tickets from user ${userId}`);
+    }
+
     // Delete the user from auth using service role
     const { error: deleteAuthError } = await supabase.auth.admin.deleteUser(userId);
     if (deleteAuthError) {
