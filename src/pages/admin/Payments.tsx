@@ -9,9 +9,8 @@ import toast from 'react-hot-toast';
 interface PaymentWithOrder extends PaymentTransaction {
   order?: {
     id: string;
-    order_number: string;
-    total_amount: number;
-    status: string;
+    customer_name: string;
+    total: number;
     customer_email?: string;
   };
 }
@@ -45,7 +44,7 @@ const Payments: React.FC = () => {
             try {
               const { data: orderData } = await supabase
                 .from('orders')
-                .select('id, order_number, total_amount, status, customer_email')
+                .select('id, customer_name, total, customer_email')
                 .eq('id', transaction.order_id)
                 .single();
               order = orderData;
@@ -232,8 +231,8 @@ const Payments: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <ShoppingCart className="w-4 h-4 text-blue-600" />
                             <div>
-                              <div className="font-medium text-sm">#{transaction.order.order_number}</div>
-                              <div className="text-xs text-gray-500">${transaction.order.total_amount.toFixed(2)}</div>
+                              <div className="font-medium text-sm">#{transaction.order.id}</div>
+                              <div className="text-xs text-gray-500">${transaction.order.total.toFixed(2)}</div>
                             </div>
                           </div>
                         ) : (

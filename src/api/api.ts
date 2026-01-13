@@ -1003,23 +1003,23 @@ export const supportTicketService = {
     if (error) throw error;
     if (!data) throw new Error('Failed to assign ticket');
 
-    // Get the assigned user's email
-    // DISABLED: user_roles queries cause 400 errors due to RLS policies
-    // let assignedEmail = null;
-    // if (data.assigned_to) {
-    //   try {
-    //     const { data: userInfo, error: userError } = await supabase
-    //       .from('user_roles')
-    //       .select('email')
-    //       .eq('user_id', data.assigned_to)
-    //       .single();
-    //
-    //     assignedEmail = (!userError && userInfo) ? userInfo.email : null;
-    //   } catch (err) {
-    //     console.warn('⚠️ API: Could not fetch assigned user email from user_roles:', err);
-    //   }
-    // }
-    const assignedEmail = null; // Temporarily disabled due to RLS issues
+    // Get the assigned user's email and name
+    let assignedEmail = null;
+    if (data.assigned_to) {
+      try {
+        const { data: userInfo, error: userError } = await supabase
+          .from('user_details')
+          .select('email, name')
+          .eq('user_id', data.assigned_to)
+          .single();
+
+        if (!userError && userInfo) {
+          assignedEmail = userInfo.email;
+        }
+      } catch (err) {
+        console.warn('⚠️ API: Could not fetch assigned user info from user_details:', err);
+      }
+    }
 
     return {
       ...data,
@@ -1461,14 +1461,14 @@ export const customerService = {
     // Get customers from support tickets
     const customers = await this.getAllFromTickets();
 
-    // Get all user roles to include employees and admins
-    const { data: rolesData, error: rolesError } = await supabase
-      .from('user_roles')
-      .select('user_id, role, created_at, name');
+    // Get all user roles with email from auth.users (we need to fetch both tables)
+    const { data: userDetails, error: detailsError } = await supabase
+      .from('user_details')
+      .select('user_id, role, name, email, user_created_at, role_assigned_at, last_sign_in_at');
 
-    if (rolesError) {
-      console.warn('⚠️ API: Could not fetch user roles:', rolesError);
-      return customers; // Return just customers if roles query fails
+    if (detailsError) {
+      console.warn('⚠️ API: Could not fetch user details:', detailsError);
+      return customers; // Return just customers if query fails
     }
 
     // Create a map of existing customers
@@ -1477,23 +1477,23 @@ export const customerService = {
       userMap.set(customer.user_id, customer);
     });
 
-    // Add employees and admins from user_roles (even if they don't have tickets)
-    (rolesData || []).forEach(roleEntry => {
+    // Add employees and admins from user_details (even if they don't have tickets)
+    (userDetails || []).forEach(userDetail => {
       // Skip customers since they're already added
-      if (roleEntry.role === 'customer') return;
+      if (userDetail.role === 'customer') return;
 
-      const userId = roleEntry.user_id;
+      const userId = userDetail.user_id;
       if (!userMap.has(userId)) {
         // This is a new user (employee/admin) not found in tickets
         userMap.set(userId, {
           user_id: userId,
-          email: null, // We don't have email from user_roles
-          user_created_at: roleEntry.created_at,
-          customer_name: roleEntry.name || null, // Use name from user_roles
-          last_sign_in_at: null,
+          email: userDetail.email,
+          user_created_at: userDetail.user_created_at,
+          customer_name: userDetail.name || null, // Use name from user_roles
+          last_sign_in_at: userDetail.last_sign_in_at,
           email_confirmed_at: null,
-          role: roleEntry.role,
-          role_assigned_at: roleEntry.created_at,
+          role: userDetail.role,
+          role_assigned_at: userDetail.role_assigned_at,
           is_placeholder: false
         });
       }
@@ -1501,7 +1501,7 @@ export const customerService = {
 
     const result = Array.from(userMap.values());
     console.log('👥 API: Returning', result.length, 'total users');
-    console.log('👥 API: Users with roles:', result.map(u => ({ id: u.user_id, email: u.email, role: u.role })));
+    console.log('👥 API: Users with roles:', result.map(u => ({ id: u.user_id, email: u.email, name: u.customer_name, role: u.role })));
 
     return result;
   },

@@ -132,6 +132,7 @@ SELECT
     ur.role,
     ur.name,
     au.email,
+    au.last_sign_in_at,
     ur.created_at as role_assigned_at,
     au.created_at as user_created_at
 FROM user_roles ur
