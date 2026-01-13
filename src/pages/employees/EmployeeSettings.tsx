@@ -65,9 +65,57 @@ const EmployeeSettings: React.FC = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  
+  // Profile data state
+  const [employeeData, setEmployeeData] = useState({
+    name: '',
+    email: '',
+    role: 'employee'
+  });
 
   const passwordStrength = useMemo(() => getPasswordStrength(newPassword), [newPassword]);
   const isPasswordValid = passwordStrength.strength >= 3; // At least "Fair" strength
+
+  // Fetch employee profile data
+  useEffect(() => {
+    const fetchEmployeeData = async () => {
+      try {
+        setLoadingProfile(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user?.id) {
+          toast.error('Failed to load profile data');
+          return;
+        }
+
+        // Fetch user role and name from user_roles table
+        const { data: userRoleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('name, role')
+          .eq('user_id', user.id)
+          .single();
+
+        if (roleError) {
+          console.error('Error fetching user role:', roleError);
+          toast.error('Failed to load profile information', { id: 'profile-load-error' });
+          return;
+        }
+
+        setEmployeeData({
+          name: userRoleData?.name || '',
+          email: user.email || '',
+          role: userRoleData?.role || 'employee'
+        });
+      } catch (err) {
+        console.error('Error fetching employee data:', err);
+        toast.error('Failed to load profile data', { id: 'profile-fetch-error' });
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    fetchEmployeeData();
+  }, []);
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,23 +183,38 @@ const EmployeeSettings: React.FC = () => {
             <CardDescription className="text-sm">View and update your profile</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 sm:space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="full-name" className="text-sm font-medium">Full Name</Label>
-              <Input id="full-name" disabled defaultValue="John Employee" className="w-full" />
-              <p className="text-xs text-muted-foreground">Contact your admin to change this</p>
-            </div>
+            {loadingProfile ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                  <p className="text-gray-600 mt-2 text-sm">Loading profile...</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="full-name" className="text-sm font-medium">Full Name</Label>
+                  <Input id="full-name" disabled value={employeeData.name} className="w-full" />
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
-              <Input id="email" type="email" disabled defaultValue="employee@clothify.com" className="w-full" />
-              <p className="text-xs text-muted-foreground">Contact your admin to change this</p>
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
+                  <Input id="email" type="email" disabled value={employeeData.email} className="w-full" />
+                  <p className="text-xs text-muted-foreground">Contact your admin to change this</p>
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="role" className="text-sm font-medium">Role</Label>
-              <Input id="role" disabled defaultValue="Sales Employee" className="w-full" />
-              <p className="text-xs text-muted-foreground">Your role is managed by administrators</p>
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role" className="text-sm font-medium">Role</Label>
+                  <Input 
+                    id="role" 
+                    disabled 
+                    value={employeeData.role === 'employee' ? 'Employee' : employeeData.role.charAt(0).toUpperCase() + employeeData.role.slice(1)}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-muted-foreground">Your role is managed by administrators</p>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 

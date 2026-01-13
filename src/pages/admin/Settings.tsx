@@ -4,7 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { authService, supabase } from '../../api/api';
@@ -129,52 +128,49 @@ const Settings: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* General Settings */}
+        {/* Shop Details */}
         <Card>
           <CardHeader className="pb-3 sm:pb-4">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <Store className="w-4 h-4 sm:w-5 sm:h-5" />
-              General Settings
+              Shop Details
             </CardTitle>
-            <CardDescription className="text-sm">Configure your store's basic information</CardDescription>
+            <CardDescription className="text-sm">View your store information and status</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4 sm:space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="store-name" className="text-sm font-medium">Store Name</Label>
-              <Input id="store-name" defaultValue="Clothify" className="w-full" />
+          <CardContent className="space-y-4 sm:space-y-6 text-sm">
+            <div className="flex items-center justify-between py-2 border-b">
+              <span className="text-gray-600 font-medium">Store Name</span>
+              <span className="font-semibold">Clothify</span>
+            </div>
+            
+            <div className="flex items-center justify-between py-2 border-b">
+              <span className="text-gray-600 font-medium">Store Status</span>
+              <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">Active</span>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="contact-email" className="text-sm font-medium">Contact Email</Label>
-              <Input id="contact-email" type="email" defaultValue="support@clothify.com" className="w-full" />
+            <div className="flex items-center justify-between py-2 border-b">
+              <span className="text-gray-600 font-medium">Support Email</span>
+              <span className="font-mono text-gray-700">support@clothify.com</span>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="currency" className="text-sm font-medium">Currency</Label>
-              <Select defaultValue="usd">
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="usd">USD ($)</SelectItem>
-                  <SelectItem value="eur">EUR (€)</SelectItem>
-                  <SelectItem value="gbp">GBP (£)</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex items-center justify-between py-2 border-b">
+              <span className="text-gray-600 font-medium">Store Type</span>
+              <span className="font-semibold">Fashion & Apparel</span>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="timezone" className="text-sm font-medium">Timezone</Label>
-              <Select defaultValue="utc">
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="utc">UTC</SelectItem>
-                  <SelectItem value="est">Eastern Time</SelectItem>
-                  <SelectItem value="pst">Pacific Time</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex items-center justify-between py-2 border-b">
+              <span className="text-gray-600 font-medium">Currency</span>
+              <span className="font-semibold">USD ($)</span>
+            </div>
+
+            <div className="flex items-center justify-between py-2 border-b">
+              <span className="text-gray-600 font-medium">Timezone</span>
+              <span className="font-semibold">UTC</span>
+            </div>
+
+            <div className="flex items-center justify-between py-2">
+              <span className="text-gray-600 font-medium">Store Since</span>
+              <span className="font-semibold">January 2025</span>
             </div>
           </CardContent>
         </Card>
