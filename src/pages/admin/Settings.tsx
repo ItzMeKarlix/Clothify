@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Settings as SettingsIcon, Store, Mail, DollarSign, Bell, Shield, Save, Eye, EyeOff } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Settings as SettingsIcon, Store, Bell, Shield, Save, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,14 +7,58 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { authService, supabase, userService } from '../../api/api';
+import { authService, supabase } from '../../api/api';
 import toast from 'react-hot-toast';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useOnboarding } from '../../hooks/use-onboarding';
 import OnboardingModal from '../../components/OnboardingModal';
 
+// Password strength checker
+const getPasswordStrength = (password: string) => {
+  let strength = 0;
+  const feedback: string[] = [];
+
+  if (!password) return { strength: 0, feedback: ['Enter a password'], color: 'gray', label: 'None' };
+
+  if (password.length >= 6) strength++;
+  else feedback.push('At least 6 characters');
+
+  if (password.length >= 8) strength++;
+  else if (password.length >= 6) feedback.push('8+ characters recommended');
+
+  if (/[a-z]/.test(password)) strength++;
+  else feedback.push('Add lowercase letters');
+
+  if (/[A-Z]/.test(password)) strength++;
+  else feedback.push('Add uppercase letters');
+
+  if (/[0-9]/.test(password)) strength++;
+  else feedback.push('Add numbers');
+
+  if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) strength++;
+  else feedback.push('Add special characters');
+
+  let color = 'red';
+  let label = 'Weak';
+
+  if (strength <= 2) {
+    color = 'red';
+    label = 'Weak';
+  } else if (strength <= 4) {
+    color = 'yellow';
+    label = 'Fair';
+  } else if (strength <= 5) {
+    color = 'blue';
+    label = 'Good';
+  } else {
+    color = 'green';
+    label = 'Strong';
+  }
+
+  return { strength, feedback, color, label };
+};
+
 const Settings: React.FC = () => {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { needsOnboarding, userEmail } = useOnboarding();
   const [currentPassword, setCurrentPassword] = useState('');
@@ -25,30 +69,8 @@ const Settings: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
 
-  const [role, setRole] = useState<string | null>(null);
-  const [roleLoading, setRoleLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchRole = async () => {
-      setRoleLoading(true);
-      try {
-        const user = await authService.getCurrentUser();
-        if (!user?.id) {
-          setRoleLoading(false);
-          return;
-        }
-        const r = await userService.getUserRole(user.id);
-        setRole(r);
-      } catch (err) {
-        console.warn('Failed to fetch user role', err);
-      } finally {
-        setRoleLoading(false);
-      }
-    };
-    fetchRole();
-  }, []);
-
-
+  const passwordStrength = useMemo(() => getPasswordStrength(newPassword), [newPassword]);
+  const isPasswordValid = passwordStrength.strength >= 3; // At least "Fair" strength
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,13 +80,13 @@ const Settings: React.FC = () => {
       return;
     }
 
-    if (newPassword !== confirmPassword) {
-      toast.error('New passwords do not match');
+    if (!isPasswordValid) {
+      toast.error(`Password is too weak. ${passwordStrength.feedback[0]}`);
       return;
     }
 
-    if (newPassword.length < 8) {
-      toast.error('Password must be at least 8 characters');
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match');
       return;
     }
 
@@ -78,9 +100,6 @@ const Settings: React.FC = () => {
 
       // Update the password using Supabase auth
       await authService.updatePassword(newPassword);
-
-      // Mark onboarding as completed
-      await completeOnboarding();
 
       toast.success('Password updated successfully!');
       
@@ -273,7 +292,7 @@ const Settings: React.FC = () => {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Enter new password (min 8 characters)"
+                      placeholder="Enter new password (min 6 characters)"
                     />
                     <button
                       type="button"
@@ -283,6 +302,63 @@ const Settings: React.FC = () => {
                       {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
+
+                  {/* Password Strength Meter */}
+                  {newPassword && (
+                    <div className="space-y-2">
+                      <div className="flex gap-1">
+                        {[...Array(6)].map((_, i) => (
+                          <div
+                            key={i}
+                            className={`h-1.5 flex-1 rounded-full transition-colors ${
+                              i < passwordStrength.strength
+                                ? passwordStrength.color === 'red'
+                                  ? 'bg-red-500'
+                                  : passwordStrength.color === 'yellow'
+                                  ? 'bg-yellow-500'
+                                  : passwordStrength.color === 'blue'
+                                  ? 'bg-blue-500'
+                                  : 'bg-green-500'
+                                : 'bg-gray-200'
+                            }`}
+                          />
+                        ))}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-medium ${
+                          passwordStrength.color === 'red'
+                            ? 'text-red-600'
+                            : passwordStrength.color === 'yellow'
+                            ? 'text-yellow-600'
+                            : passwordStrength.color === 'blue'
+                            ? 'text-blue-600'
+                            : 'text-green-600'
+                        }`}>
+                          Strength: {passwordStrength.label}
+                        </span>
+                      </div>
+
+                      {/* Password Requirements */}
+                      {passwordStrength.feedback.length > 0 && (
+                        <div className="bg-gray-50 p-3 rounded border border-gray-200 space-y-1">
+                          {passwordStrength.feedback.map((item, idx) => (
+                            <div key={idx} className="flex items-center gap-2 text-xs text-gray-600">
+                              <AlertCircle className="h-3 w-3 text-amber-500 shrink-0" />
+                              <span>{item}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {isPasswordValid && (
+                        <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 p-2 rounded border border-green-200">
+                          <CheckCircle className="h-4 w-4 shrink-0" />
+                          <span>Password is strong enough!</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -308,8 +384,8 @@ const Settings: React.FC = () => {
 
                 <Button 
                   type="submit" 
-                  disabled={changingPassword}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword || !isPasswordValid || newPassword !== confirmPassword}
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                   {changingPassword ? 'Updating...' : 'Update Password'}
                 </Button>
@@ -366,3 +442,5 @@ const Settings: React.FC = () => {
 };
 
 export default Settings;
+
+

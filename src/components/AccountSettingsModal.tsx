@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { User, Mail, Shield, Key, Bell, Save, X } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { User, Mail, Shield, Key, Bell, Save, X, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,51 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from '@/api/api';
 import toast from 'react-hot-toast';
+
+// Password strength checker (same as OnboardingModal)
+const getPasswordStrength = (password: string) => {
+  let strength = 0;
+  const feedback: string[] = [];
+
+  if (!password) return { strength: 0, feedback: ['Enter a password'], color: 'gray', label: 'None' };
+
+  if (password.length >= 6) strength++;
+  else feedback.push('At least 6 characters');
+
+  if (password.length >= 8) strength++;
+  else if (password.length >= 6) feedback.push('8+ characters recommended');
+
+  if (/[a-z]/.test(password)) strength++;
+  else feedback.push('Add lowercase letters');
+
+  if (/[A-Z]/.test(password)) strength++;
+  else feedback.push('Add uppercase letters');
+
+  if (/[0-9]/.test(password)) strength++;
+  else feedback.push('Add numbers');
+
+  if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) strength++;
+  else feedback.push('Add special characters');
+
+  let color = 'red';
+  let label = 'Weak';
+
+  if (strength <= 2) {
+    color = 'red';
+    label = 'Weak';
+  } else if (strength <= 4) {
+    color = 'yellow';
+    label = 'Fair';
+  } else if (strength <= 5) {
+    color = 'blue';
+    label = 'Good';
+  } else {
+    color = 'green';
+    label = 'Strong';
+  }
+
+  return { strength, feedback, color, label };
+};
 
 interface AccountSettingsModalProps {
   isOpen: boolean;
@@ -21,6 +66,9 @@ const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({ isOpen, onC
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [originalName, setOriginalName] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -31,6 +79,9 @@ const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({ isOpen, onC
     taskNotifications: userRole === 'employee',
     marketingEmails: userRole === 'admin',
   });
+
+  const passwordStrength = useMemo(() => getPasswordStrength(formData.newPassword), [formData.newPassword]);
+  const isPasswordValid = passwordStrength.strength >= 3; // At least "Fair" strength
 
   useEffect(() => {
     if (isOpen) {
@@ -162,13 +213,13 @@ const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({ isOpen, onC
       return;
     }
 
-    if (formData.newPassword !== formData.confirmPassword) {
-      toast.error('New passwords do not match', { id: 'account-password-mismatch' });
+    if (!isPasswordValid) {
+      toast.error(`Password is too weak. ${passwordStrength.feedback[0]}`, { id: 'account-password-weak' });
       return;
     }
 
-    if (formData.newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters long', { id: 'account-password-length' });
+    if (formData.newPassword !== formData.confirmPassword) {
+      toast.error('New passwords do not match', { id: 'account-password-mismatch' });
       return;
     }
 
@@ -295,10 +346,11 @@ const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({ isOpen, onC
                   onChange={(e) => handleInputChange('email', e.target.value)}
                   placeholder="Enter your email"
                   className="flex-1"
+                  disabled={userRole === 'employee'}
                 />
                 <Button
                   onClick={handleUpdateEmail}
-                  disabled={saving || formData.email === user?.email}
+                  disabled={saving || formData.email === user?.email || userRole === 'employee'}
                   variant="outline"
                   size="sm"
                 >
@@ -307,6 +359,7 @@ const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({ isOpen, onC
               </div>
               <p className="text-xs text-muted-foreground">
                 Current: {user?.email}
+                {userRole === 'employee' && ' (Contact your admin to change)'}
               </p>
             </div>
 
@@ -324,41 +377,135 @@ const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({ isOpen, onC
           <TabsContent value="security" className="space-y-4 mt-6">
             <div className="space-y-2">
               <Label htmlFor="currentPassword">Current Password</Label>
-              <Input
-                id="currentPassword"
-                type="password"
-                value={formData.currentPassword}
-                onChange={(e) => handleInputChange('currentPassword', e.target.value)}
-                placeholder="Enter current password"
-              />
+              <div className="relative">
+                <input
+                  id="currentPassword"
+                  type={showCurrentPassword ? 'text' : 'password'}
+                  value={formData.currentPassword}
+                  onChange={(e) => handleInputChange('currentPassword', e.target.value)}
+                  placeholder="Enter current password"
+                  className="w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="newPassword">New Password</Label>
-              <Input
-                id="newPassword"
-                type="password"
-                value={formData.newPassword}
-                onChange={(e) => handleInputChange('newPassword', e.target.value)}
-                placeholder="Enter new password"
-              />
+              <div className="relative">
+                <input
+                  id="newPassword"
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={formData.newPassword}
+                  onChange={(e) => handleInputChange('newPassword', e.target.value)}
+                  placeholder="Enter new password (min 6 characters)"
+                  className="w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+
+              {/* Password Strength Meter */}
+              {formData.newPassword && (
+                <div className="space-y-2">
+                  <div className="flex gap-1">
+                    {[...Array(6)].map((_, i) => (
+                      <div
+                        key={i}
+                        className={`h-1.5 flex-1 rounded-full transition-colors ${
+                          i < passwordStrength.strength
+                            ? passwordStrength.color === 'red'
+                              ? 'bg-red-500'
+                              : passwordStrength.color === 'yellow'
+                              ? 'bg-yellow-500'
+                              : passwordStrength.color === 'blue'
+                              ? 'bg-blue-500'
+                              : 'bg-green-500'
+                            : 'bg-gray-200'
+                        }`}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-medium ${
+                      passwordStrength.color === 'red'
+                        ? 'text-red-600'
+                        : passwordStrength.color === 'yellow'
+                        ? 'text-yellow-600'
+                        : passwordStrength.color === 'blue'
+                        ? 'text-blue-600'
+                        : 'text-green-600'
+                    }`}>
+                      Strength: {passwordStrength.label}
+                    </span>
+                  </div>
+
+                  {/* Password Requirements */}
+                  {passwordStrength.feedback.length > 0 && (
+                    <div className="bg-gray-50 p-3 rounded border border-gray-200 space-y-1">
+                      {passwordStrength.feedback.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-xs text-gray-600">
+                          <AlertCircle className="h-3 w-3 text-amber-500 shrink-0" />
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {isPasswordValid && (
+                    <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 p-2 rounded border border-green-200">
+                      <CheckCircle className="h-4 w-4 shrink-0" />
+                      <span>Password is strong enough!</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm New Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                placeholder="Confirm new password"
-              />
+              <div className="relative">
+                <input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={formData.confirmPassword}
+                  onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                  placeholder="Confirm new password"
+                  className="w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
 
             <Button
               onClick={handleUpdatePassword}
-              disabled={saving}
-              className="w-full"
+              disabled={
+                saving || 
+                !formData.currentPassword || 
+                !formData.newPassword || 
+                !formData.confirmPassword ||
+                !isPasswordValid ||
+                formData.newPassword !== formData.confirmPassword
+              }
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {saving ? 'Updating...' : 'Update Password'}
             </Button>

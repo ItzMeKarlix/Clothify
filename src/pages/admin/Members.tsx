@@ -73,10 +73,22 @@ const Members: React.FC = () => {
   // Reports state
   const [updatingReport, setUpdatingReport] = useState(false);
   const [showReportHistory, setShowReportHistory] = useState(false);
+  
+  // Current user state
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchMembers();
     fetchReports();
+    
+    // Get current user ID
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+    };
+    getCurrentUser();
   }, []);
 
   // OTP Timer effects
@@ -560,11 +572,18 @@ const Members: React.FC = () => {
                             <Edit className="h-4 w-4" />
                           </button>
                           <button 
-                            className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                            title="Remove member"
+                            className={`p-1 rounded transition-colors ${
+                              member.user_id === currentUserId 
+                                ? 'text-gray-400 cursor-not-allowed bg-gray-50' 
+                                : 'text-red-600 hover:bg-red-50'
+                            }`}
+                            title={member.user_id === currentUserId ? "You cannot delete your own account" : "Remove member"}
+                            disabled={member.user_id === currentUserId}
                             onClick={() => {
-                              setUserToDelete(member);
-                              setShowDeleteModal(true);
+                              if (member.user_id !== currentUserId) {
+                                setUserToDelete(member);
+                                setShowDeleteModal(true);
+                              }
                             }}
                           >
                             <Trash2 className="h-4 w-4" />
