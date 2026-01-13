@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { logger } from "@/utils/logger";
 import toast from 'react-hot-toast';
 
 interface Customer {
@@ -80,28 +81,28 @@ const EmployeeCustomers: React.FC = () => {
     try {
       setLoading(true);
       setError(null); // Clear any previous errors
-      console.log('🔍 Fetching customers for employees...');
+      logger.log('🔍 Fetching customers for employees...');
 
       // Check if user is authenticated
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError) {
-        console.error('❌ Auth error:', authError);
+        logger.error('❌ Auth error:', authError);
         setError('Authentication error. Please log in again.');
         return;
       }
       if (!user) {
-        console.error('❌ No authenticated user');
+        logger.error('❌ No authenticated user');
         setError('Not authenticated. Please log in.');
         return;
       }
-      console.log('✅ Authenticated user:', user.email);
+      logger.log('✅ Authenticated user:', user.email);
 
       const customersData = await customerService.getAllForEmployees();
-      console.log('✅ Customers fetched:', customersData);
+      logger.log('✅ Customers fetched:', customersData);
 
       setCustomers(customersData || []);
     } catch (err) {
-      console.error('❌ Error fetching customers:', err);
+      logger.error('❌ Error fetching customers:', err);
       setError(`Failed to load customers: ${err instanceof Error ? err.message : 'Unknown error'}`);
       setCustomers([]); // Set empty array on error
     } finally {
@@ -111,12 +112,12 @@ const EmployeeCustomers: React.FC = () => {
 
   const fetchSupportTickets = async () => {
     try {
-      console.log('🔍 Fetching support tickets for employee...');
+      logger.log('🔍 Fetching support tickets for employee...');
 
       // Check authentication
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
-        console.error('❌ Auth error for tickets:', authError);
+        logger.error('❌ Auth error for tickets:', authError);
         setSupportTickets([]);
         return;
       }
@@ -127,7 +128,7 @@ const EmployeeCustomers: React.FC = () => {
       // NOT tickets assigned to other employees
       
       const assignedTickets = await supportTicketService.getAssignedTickets();
-      console.log('✅ Assigned tickets:', assignedTickets);
+      logger.log('✅ Assigned tickets:', assignedTickets);
 
       // Get unassigned tickets (tickets with no assigned_to)
       const { data: unassignedData, error: unassignedError } = await supabase
@@ -140,12 +141,12 @@ const EmployeeCustomers: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (unassignedError) {
-        console.error('❌ Error fetching unassigned tickets:', unassignedError);
+        logger.error('❌ Error fetching unassigned tickets:', unassignedError);
         setSupportTickets(assignedTickets);
         return;
       }
 
-      console.log('✅ Unassigned tickets:', unassignedData);
+      logger.log('✅ Unassigned tickets:', unassignedData);
 
       // Transform unassigned tickets
       const unassignedTickets = (unassignedData || []).map(ticket => ({
@@ -164,23 +165,23 @@ const EmployeeCustomers: React.FC = () => {
         index === self.findIndex(t => t.id === ticket.id)
       );
 
-      console.log('✅ Final tickets for employee:', uniqueTickets);
+      logger.log('✅ Final tickets for employee:', uniqueTickets);
       setSupportTickets(uniqueTickets);
     } catch (err) {
-      console.error('❌ Error fetching support tickets:', err);
+      logger.error('❌ Error fetching support tickets:', err);
       setSupportTickets([]);
     }
   };
 
   const fetchEmployees = async () => {
     try {
-      console.log('🔍 Fetching employees...');
+      logger.log('🔍 Fetching employees...');
       const allUsers = await customerService.getAllUsers();
       const employeesData = allUsers.filter(user => user.role === 'employee');
-      console.log('✅ Employees fetched:', employeesData);
+      logger.log('✅ Employees fetched:', employeesData);
       setEmployees(employeesData);
     } catch (err) {
-      console.error('❌ Error fetching employees:', err);
+      logger.error('❌ Error fetching employees:', err);
       setEmployees([]);
     }
   };
@@ -212,7 +213,7 @@ const EmployeeCustomers: React.FC = () => {
         tickets: customerTickets
       });
     } catch (error) {
-      console.error('Error fetching customer details:', error);
+      logger.error('Error fetching customer details:', error);
       toast.error('Failed to load customer details', { id: 'emp-customers-load-failed' });
     }
   };
@@ -226,7 +227,7 @@ const EmployeeCustomers: React.FC = () => {
         responses: responses
       });
     } catch (error) {
-      console.error('Error fetching ticket details:', error);
+      logger.error('Error fetching ticket details:', error);
       toast.error('Failed to load ticket details', { id: 'emp-customers-ticket-load-failed' });
     }
   };
@@ -241,7 +242,7 @@ const EmployeeCustomers: React.FC = () => {
         responses: details.responses
       });
     } catch (error) {
-      console.error('Error fetching ticket responses:', error);
+      logger.error('Error fetching ticket responses:', error);
       // Still open the modal even if responses fail to load
       setRespondModal({
         ticket,
@@ -282,9 +283,9 @@ const EmployeeCustomers: React.FC = () => {
       }
       fetchSupportTickets(); // Refresh tickets
     } catch (error) {
-      console.error('❌ Error adding response:', error);
+      logger.error('❌ Error adding response:', error);
       if (error instanceof Error) {
-        console.error('Error message:', error.message);
+        logger.error('Error message:', error.message);
       }
       toast.error('Failed to add response', { id: 'emp-response-failed' });
     }

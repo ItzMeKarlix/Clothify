@@ -6,6 +6,7 @@
 import { authService } from "../api/api";
 import toast from "react-hot-toast";
 import { sanitizeString, isValidEmail, isValidLength } from "./validation";
+import { logger } from "./logger";
 
 /**
  * Handle login with email and password
@@ -47,7 +48,7 @@ export const handleAuthLogin = async (
         throw new Error("CAPTCHA verification failed");
       }
     } catch (err) {
-      console.warn("Could not verify CAPTCHA, proceeding with login:", err);
+      logger.warn("Could not verify CAPTCHA, proceeding with login:", err);
     }
   }
 
@@ -102,7 +103,7 @@ export const checkAuthSession = async () => {
     const session = await authService.getCurrentSession();
     return !!session;
   } catch (err) {
-    console.error("Auth session check error:", err);
+    logger.error("Auth session check error:", err);
     return false;
   }
 };
@@ -140,7 +141,7 @@ export const loadTurnstileScript = (): Promise<void> => {
         resolve();
       });
       existing.addEventListener("error", () => {
-        console.warn("Failed to load Turnstile script");
+        logger.warn("Failed to load Turnstile script");
         resolve();
       });
       return;
@@ -156,7 +157,7 @@ export const loadTurnstileScript = (): Promise<void> => {
       resolve();
     };
     script.onerror = () => {
-      console.warn("Failed to load Turnstile script");
+      logger.warn("Failed to load Turnstile script");
       resolve();
     };
     document.body.appendChild(script);
@@ -185,14 +186,14 @@ export const initializeTurnstile = async (containerId: string): Promise<void> =>
             size: "normal",
           });
         } catch (err) {
-          console.warn("Turnstile render error:", err);
+          logger.warn("Turnstile render error:", err);
         }
         resolve();
       } else if (attempts < maxAttempts) {
         attempts++;
         setTimeout(tryInit, 100);
       } else {
-        console.warn("Turnstile failed to initialize after 5 seconds");
+        logger.warn("Turnstile failed to initialize after 5 seconds");
         resolve();
       }
     };

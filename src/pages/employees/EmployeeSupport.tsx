@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { supabase } from '../../api/api';
 import toast from 'react-hot-toast';
+import { logger } from "@/utils/logger";
 
 interface ReportIssue {
   category: string;
@@ -90,7 +91,7 @@ const EmployeeSupport: React.FC = () => {
       });
 
     } catch (error) {
-      console.error('Error submitting report:', error);
+      logger.error('Error submitting report:', error);
       toast.error('Failed to submit report. Please try again.', { id: 'employee-report-failed' });
     } finally {
       setIsSubmitting(false);

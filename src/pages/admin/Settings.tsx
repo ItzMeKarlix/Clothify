@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useOnboarding } from '../../hooks/use-onboarding';
 import OnboardingModal from '../../components/OnboardingModal';
+import { logger } from "@/utils/logger";
 
 // Password strength checker
 const getPasswordStrength = (password: string) => {
@@ -112,7 +113,7 @@ const Settings: React.FC = () => {
         navigate('/admin');
       }, 1500);
     } catch (err: any) {
-      console.error('Password change error:', err);
+      logger.error('Password change error:', err);
       toast.error(err.message || 'Failed to update password');
     } finally {
       setChangingPassword(false);

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { logger } from '@/utils/logger';
 import toast from 'react-hot-toast';
 
 interface Customer {
@@ -84,15 +85,15 @@ const Customers: React.FC = () => {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      console.log('🔍 Fetching customers from support tickets...');
+      logger.log('🔍 Fetching customers from support tickets...');
       const customersData = await customerService.getAllFromTickets();
-      console.log('✅ Customers fetched:', customersData);
+      logger.log('✅ Customers fetched:', customersData);
       // Only show customers in the customer directory
       const filteredCustomers = customersData.filter(user => user.role === 'customer');
-      console.log('✅ Filtered to customers only:', filteredCustomers);
+      logger.log('✅ Filtered to customers only:', filteredCustomers);
       setCustomers(filteredCustomers);
     } catch (err) {
-      console.error('❌ Error fetching customers:', err);
+      logger.error('❌ Error fetching customers:', err);
       setError('Failed to load customers');
     } finally {
       setLoading(false);
@@ -101,9 +102,9 @@ const Customers: React.FC = () => {
 
   const fetchSupportTickets = async () => {
     try {
-      console.log('🔍 Fetching support tickets...');
+      logger.log('🔍 Fetching support tickets...');
       const ticketsData = await supportTicketService.getAll();
-      console.log('✅ Support tickets fetched:', ticketsData);
+      logger.log('✅ Support tickets fetched:', ticketsData);
       setSupportTickets(ticketsData || []);
 
       // Update any open modals with the latest ticket data
@@ -135,22 +136,22 @@ const Customers: React.FC = () => {
         }
       }
     } catch (err) {
-      console.error('❌ Error fetching support tickets:', err);
+      logger.error('❌ Error fetching support tickets:', err);
       setSupportTickets([]);
     }
   };
 
   const fetchEmployees = async () => {
     try {
-      console.log('🔍 Fetching employees...');
+      logger.log('🔍 Fetching employees...');
       const allUsers = await customerService.getAllUsers();
-      console.log('All users:', allUsers);
+      logger.log('All users:', allUsers);
       const employeesData = allUsers.filter(user => user.role === 'employee');
-      console.log('✅ Employees fetched:', employeesData);
-      console.log('Employee count:', employeesData.length);
+      logger.log('✅ Employees fetched:', employeesData);
+      logger.log('Employee count:', employeesData.length);
       setEmployees(employeesData);
     } catch (err) {
-      console.error('❌ Error fetching employees:', err);
+      logger.error('❌ Error fetching employees:', err);
       setEmployees([]);
     }
   };
@@ -165,7 +166,7 @@ const Customers: React.FC = () => {
         responses: details.responses
       });
     } catch (error) {
-      console.error('Error fetching ticket responses:', error);
+      logger.error('Error fetching ticket responses:', error);
       // Still open the modal even if responses fail to load
       setRespondModal({
         ticket,
@@ -199,7 +200,7 @@ const Customers: React.FC = () => {
         return;
       }
 
-      console.log(`Assigning ticket ${assignModal.ticket?.id} to employee ${selectedEmployee.email}`);
+      logger.log(`Assigning ticket ${assignModal.ticket?.id} to employee ${selectedEmployee.email}`);
 
       // Call the API to assign the ticket
       await supportTicketService.assignTicket(assignModal.ticket!.id, assignModal.assigneeId);
@@ -208,7 +209,7 @@ const Customers: React.FC = () => {
       toast.success(`Ticket assigned to ${selectedEmployee.customer_name || selectedEmployee.email || 'employee'}`, { id: 'customers-ticket-assigned' });
       fetchSupportTickets(); // Refresh tickets
     } catch (error) {
-      console.error('Error assigning ticket:', error);
+      logger.error('Error assigning ticket:', error);
       toast.error('Failed to assign ticket', { id: 'customers-assign-failed' });
     }
   };
@@ -245,9 +246,9 @@ const Customers: React.FC = () => {
       }
       fetchSupportTickets();
     } catch (error) {
-      console.error('❌ Error submitting response:', error);
+      logger.error('❌ Error submitting response:', error);
       if (error instanceof Error) {
-        console.error('Error message:', error.message);
+        logger.error('Error message:', error.message);
       }
       toast.error('Failed to submit response', { id: 'customers-response-failed' });
     }
@@ -262,7 +263,7 @@ const Customers: React.FC = () => {
       toast.success('Ticket marked as resolved!', { id: 'customers-ticket-resolved' });
       fetchSupportTickets(); // Refresh tickets
     } catch (error) {
-      console.error('Error resolving ticket:', error);
+      logger.error('Error resolving ticket:', error);
       toast.error('Failed to resolve ticket', { id: 'customers-resolve-failed' });
     }
   };
@@ -276,7 +277,7 @@ const Customers: React.FC = () => {
       setDeleteConfirm(null);
       fetchCustomers(); // Refresh the list
     } catch (error) {
-      console.error('Error deleting customer:', error);
+      logger.error('Error deleting customer:', error);
       toast.error('Failed to delete customer', { id: 'customers-delete-failed' });
     }
   };
@@ -290,7 +291,7 @@ const Customers: React.FC = () => {
         responses: responses
       });
     } catch (error) {
-      console.error('Error fetching ticket details:', error);
+      logger.error('Error fetching ticket details:', error);
       toast.error('Failed to load ticket details', { id: 'customers-load-ticket-failed' });
     }
   };
@@ -575,7 +576,7 @@ const Customers: React.FC = () => {
                           // If employee doesn't exist, unassign the ticket
                           if (!assignedEmployee && ticket.assigned_to) {
                             supportTicketService.assignTicket(ticket.id, '').catch(err => {
-                              console.error('Error unassigning ticket:', err);
+                              logger.error('Error unassigning ticket:', err);
                             });
                           }
                           

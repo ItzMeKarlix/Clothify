@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import toast from 'react-hot-toast';
 import { loadTurnstileScript, initializeTurnstile } from '../../utils/auth';
+import { logger } from "@/utils/logger";
 
 interface Member {
   user_id: string;
@@ -123,7 +124,7 @@ const Members: React.FC = () => {
       if (error) throw error;
       setMembers(data || []);
     } catch (err) {
-      console.error('Error fetching members:', err);
+      logger.error('Error fetching members:', err);
       setError('Failed to load members');
     } finally {
       setLoading(false);
@@ -168,8 +169,8 @@ const Members: React.FC = () => {
 
       setReports(transformedReports);
     } catch (err) {
-      console.error('Error fetching reports:', err);
-      console.error('Error details:', JSON.stringify(err, null, 2));
+      logger.error('Error fetching reports:', err);
+      logger.error('Error details:', JSON.stringify(err, null, 2));
       setError('Failed to load reports');
     } finally {
       setReportsLoading(false);
@@ -205,7 +206,7 @@ const Members: React.FC = () => {
       // Refresh reports
       await fetchReports();
     } catch (err) {
-      console.error('Error updating report:', err);
+      logger.error('Error updating report:', err);
       alert('Failed to update report status');
     } finally {
       setUpdatingReport(false);
@@ -238,7 +239,7 @@ const Members: React.FC = () => {
       setOtpSent(true);
       setOtpTimer(60);
     } catch (err: any) {
-      console.error('Error sending OTP:', err);
+      logger.error('Error sending OTP:', err);
       toast.error(err.message || 'Failed to send OTP');
     }
   };
@@ -269,7 +270,7 @@ const Members: React.FC = () => {
       setAssignOtpSent(true);
       setAssignOtpTimer(60);
     } catch (err: any) {
-      console.error('Error sending assign OTP:', err);
+      logger.error('Error sending assign OTP:', err);
       toast.error(err.message || 'Failed to send OTP');
     }
   };
@@ -324,7 +325,7 @@ const Members: React.FC = () => {
         });
 
       if (roleError) {
-        console.error('Error updating role:', roleError);
+        logger.error('Error updating role:', roleError);
         throw new Error('Failed to update user role');
       }
 
@@ -340,7 +341,7 @@ const Members: React.FC = () => {
       fetchMembers();
 
     } catch (err: any) {
-      console.error('Error assigning role:', err);
+      logger.error('Error assigning role:', err);
       toast.error(err.message || 'Failed to assign role. Please try again.');
     } finally {
       setAssigning(false);
@@ -421,7 +422,7 @@ const Members: React.FC = () => {
       fetchMembers();
 
     } catch (err: any) {
-      console.error('Error inviting member:', err);
+      logger.error('Error inviting member:', err);
       toast.error(err.message || 'Failed to invite member. Please try again.');
     } finally {
       setInviting(false);
@@ -474,7 +475,7 @@ const Members: React.FC = () => {
       // Refresh the members list
       fetchMembers();
     } catch (err: any) {
-      console.error('Error deleting member:', err);
+      logger.error('Error deleting member:', err);
       toast.error(err.message || 'Failed to delete member');
     } finally {
       setDeleting(false);

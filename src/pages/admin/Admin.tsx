@@ -8,6 +8,7 @@ import { Package, Plus, Edit, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { logger } from "@/utils/logger";
 
 const Admin: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -28,7 +29,7 @@ const Admin: React.FC = () => {
       const data = await productService.getAll();
       setProducts(data);
     } catch (err) {
-      console.error("Error fetching products:", err);
+      logger.error("Error fetching products:", err);
     }
   };
 
@@ -37,7 +38,7 @@ const Admin: React.FC = () => {
       const data = await categoryService.getAll();
       setCategories(data);
     } catch (err) {
-      console.error("Error fetching categories:", err);
+      logger.error("Error fetching categories:", err);
     }
   };
 
@@ -49,7 +50,7 @@ const Admin: React.FC = () => {
       toast.success("Product deleted successfully", { id: 'admin-product-deleted' });
       fetchProducts();
     } catch (err) {
-      console.error("Delete error:", err);
+      logger.error("Delete error:", err);
       toast.error("Failed to delete product", { id: 'admin-product-delete-failed' });
     }
   };
@@ -97,7 +98,7 @@ const Admin: React.FC = () => {
             <CardDescription className="text-sm">Manage and edit your current products</CardDescription>
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
-            <ScrollArea className="h-[500px] sm:h-[600px]">
+            <ScrollArea className="h-125 sm:h-150">
               <div className="space-y-3 sm:space-y-4">
                 {products.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
@@ -110,7 +111,7 @@ const Admin: React.FC = () => {
                     <div key={p.id} className="border rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow">
                       <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                         {p.image && (
-                          <div className="flex-shrink-0">
+                          <div className="shrink-0">
                             <img
                               src={p.image}
                               alt={p.title}

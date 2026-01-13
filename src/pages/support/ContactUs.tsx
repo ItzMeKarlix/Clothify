@@ -3,6 +3,7 @@ import { supportTicketService, supportTicketCategoryService, authService, suppor
 import { SupportTicketCategory, SupportTicket } from '../../types/database';
 import { MessageSquare, AlertCircle, CheckCircle, Clock, User } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { logger } from '@/utils/logger';
 
 declare global {
   interface Window {
@@ -52,7 +53,7 @@ const ContactUs: React.FC = () => {
         if (!mounted) return;
         await initializeTurnstile('captcha-modal-container');
       } catch (err) {
-        console.warn('Turnstile setup error:', err);
+        logger.warn('Turnstile setup error:', err);
         if (mounted) setCaptchaError('Failed to load CAPTCHA. Please try again.');
       }
     })();
@@ -71,7 +72,7 @@ const ContactUs: React.FC = () => {
       const categoriesData = await supportTicketCategoryService.getAll();
       setCategories(categoriesData);
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      logger.error('Error fetching categories:', error);
     }
   };
 
@@ -83,7 +84,7 @@ const ContactUs: React.FC = () => {
       const myTickets = await supportTicketService.getMyTickets();
       setTickets(myTickets);
     } catch (err) {
-      console.error('Error fetching tickets:', err);
+      logger.error('Error fetching tickets:', err);
       setTicketsError('Failed to load your support tickets');
     } finally {
       setTicketsLoading(false);
@@ -96,7 +97,7 @@ const ContactUs: React.FC = () => {
       const userTickets = await supportTicketService.getTicketsByEmail(userEmail);
       setTickets(userTickets);
     } catch (err) {
-      console.error('Error fetching tickets:', err);
+      logger.error('Error fetching tickets:', err);
       setTicketsError('Failed to load support tickets. Please check your email address and try again.');
     } finally {
       setTicketsLoading(false);
@@ -124,7 +125,7 @@ const ContactUs: React.FC = () => {
       const responses = await supportTicketService.getResponses(ticket.id);
       setSelectedTicket((prev) => prev ? { ...prev, responses } : { ...ticket, responses });
     } catch (err) {
-      console.error('Failed to fetch responses:', err);
+      logger.error('Failed to fetch responses:', err);
     }
   };
 
@@ -147,7 +148,7 @@ const ContactUs: React.FC = () => {
       setTickets((prev) => prev.map(t => t.id === selectedTicket.id ? { ...t, responses } : t));
       setNewResponseText('');
     } catch (err) {
-      console.error('Error adding response:', err);
+      logger.error('Error adding response:', err);
       setTicketsError('Failed to add response. Please try again.');
     } finally {
       setResponseSubmitting(false);
@@ -279,7 +280,7 @@ const ContactUs: React.FC = () => {
         status: 'open' as const
       };
 
-      console.log('Submitting ticket data:', ticketData);
+      logger.log('Submitting ticket data:', ticketData);
 
       // Try direct Supabase call first (bypass our API service)
       const { data, error } = await supabase
@@ -289,7 +290,7 @@ const ContactUs: React.FC = () => {
         .single();
 
       if (error) {
-        console.error('Supabase error:', error);
+        logger.error('Supabase error:', error);
         throw new Error(`Database error: ${error.message}`);
       }
 
@@ -297,19 +298,19 @@ const ContactUs: React.FC = () => {
         throw new Error('No data returned from database');
       }
 
-      console.log('Ticket created successfully:', data);
+      logger.log('Ticket created successfully:', data);
 
       // Handle file upload if present and user is authenticated
       if (file && customerId) {
         try {
           await supportTicketAttachmentService.uploadAttachment(data.id, file, customerId);
         } catch (uploadError) {
-          console.error('File upload error:', uploadError);
+          logger.error('File upload error:', uploadError);
           setSubmitError('Ticket created successfully, but file upload failed.');
           return;
         }
       } else if (file && !customerId) {
-        console.warn('File not uploaded: Anonymous users cannot upload files to support tickets');
+        logger.warn('File not uploaded: Anonymous users cannot upload files to support tickets');
       }
 
       setSubmitSuccess(true);
@@ -339,7 +340,7 @@ const ContactUs: React.FC = () => {
       setCaptchaModalOpen(false);
 
     } catch (error) {
-      console.error('Submit error:', error);
+      logger.error('Submit error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       setSubmitError(`Failed to submit ticket: ${errorMessage}`);
       setCaptchaToken(null);

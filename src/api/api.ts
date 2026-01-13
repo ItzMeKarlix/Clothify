@@ -1,5 +1,6 @@
 import { createClient, } from '@supabase/supabase-js';
 import type { Product, ProductInsert, ProductUpdate, Order, OrderInsert, Category, Gender, SupportTicket, SupportTicketInsert, SupportTicketUpdate, TicketResponse, TicketResponseInsert, SupportTicketCategory, ProductInventory, Supplier, LowStockAlert, PaymentTransaction, PaymentRefund } from '../types/database';
+import { logger } from "@/utils/logger";
 
 // Initialize Supabase client
 
@@ -28,7 +29,7 @@ export const userService = {
       const { data, error } = await supabase.rpc('current_user_role');
       
       if (error) {
-        console.error("Error fetching user role:", error);
+        logger.error("Error fetching user role:", error);
         return null;
       }
       
@@ -42,7 +43,7 @@ export const userService = {
     });
 
     if (error) {
-      console.error("Error fetching user role:", error);
+      logger.error("Error fetching user role:", error);
       return null;
     }
 
@@ -226,7 +227,7 @@ export const orderService = {
         customer_name: data.customer_name
       });
     } catch (paymentErr) {
-      console.error('Failed to create payment transaction for order:', paymentErr);
+      logger.error('Failed to create payment transaction for order:', paymentErr);
       // Continue even if payment creation fails - the order was created successfully
     }
 

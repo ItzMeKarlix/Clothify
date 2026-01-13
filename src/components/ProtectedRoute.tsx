@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { authService, userService } from '../api/api';
+import { logger } from '../utils/logger';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -15,12 +16,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        console.log('🔐 ProtectedRoute: Checking auth for role:', requiredRole);
+        logger.log('🔐 ProtectedRoute: Checking auth for role:', requiredRole);
         const session = await authService.getCurrentSession();
-        console.log('🔐 ProtectedRoute: Session:', session);
+        logger.log('🔐 ProtectedRoute: Session:', session);
         
         if (!session || !session.user?.id) {
-          console.log('🔐 ProtectedRoute: No session or user ID, not authorized');
+          logger.log('🔐 ProtectedRoute: No session or user ID, not authorized');
           setAuthorized(false);
           setLoading(false);
           return;
@@ -28,7 +29,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
 
         // If no specific role is required (like for settings during onboarding), just check session
         if (!requiredRole) {
-          console.log('🔐 ProtectedRoute: No role required, authorized by session only');
+          logger.log('🔐 ProtectedRoute: No role required, authorized by session only');
           setAuthorized(true);
           setLoading(false);
           return;
@@ -36,19 +37,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
 
         // Fetch role directly from user_roles
         const role = await userService.getUserRole(session.user.id);
-        console.log('🔐 ProtectedRoute: User role:', role, 'Required role:', requiredRole);
+        logger.log('🔐 ProtectedRoute: User role:', role, 'Required role:', requiredRole);
         
         if (!role || role !== requiredRole) {
-          console.log('🔐 ProtectedRoute: Role mismatch or no role, not authorized');
+          logger.log('🔐 ProtectedRoute: Role mismatch or no role, not authorized');
           setAuthorized(false);
           setLoading(false);
           return;
         }
 
-        console.log('🔐 ProtectedRoute: Authorized!');
+        logger.log('🔐 ProtectedRoute: Authorized!');
         setAuthorized(true);
       } catch (err) {
-        console.error("🔐 ProtectedRoute: Auth error:", err);
+        logger.error("🔐 ProtectedRoute: Auth error:", err);
         // On any error, deny access
         setAuthorized(false);
       } finally {
@@ -69,11 +70,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
 
   // Always redirect if not explicitly authorized
   if (!authorized) {
-    console.log('🔐 ProtectedRoute: Not authorized, redirecting to login');
+    logger.log('🔐 ProtectedRoute: Not authorized, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
-  console.log('🔐 ProtectedRoute: Rendering protected content');
+  logger.log('🔐 ProtectedRoute: Rendering protected content');
   return <>{children}</>;
 };
 
