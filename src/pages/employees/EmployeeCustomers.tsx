@@ -121,12 +121,16 @@ const EmployeeCustomers: React.FC = () => {
         return;
       }
 
-      // For employees, show tickets assigned to them or unassigned tickets
+      // For employees, show ONLY:
+      // 1. Tickets assigned to them
+      // 2. Unassigned tickets (available for pickup)
+      // NOT tickets assigned to other employees
+      
       const assignedTickets = await supportTicketService.getAssignedTickets();
       console.log('✅ Assigned tickets:', assignedTickets);
 
       // Get unassigned tickets (tickets with no assigned_to)
-      const { data: allTickets, error } = await supabase
+      const { data: unassignedData, error: unassignedError } = await supabase
         .from('support_tickets')
         .select(`
           *,
@@ -135,18 +139,19 @@ const EmployeeCustomers: React.FC = () => {
         .is('assigned_to', null)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('❌ Error fetching unassigned tickets:', error);
+      if (unassignedError) {
+        console.error('❌ Error fetching unassigned tickets:', unassignedError);
         setSupportTickets(assignedTickets);
         return;
       }
 
-      console.log('✅ Unassigned tickets:', allTickets);
+      console.log('✅ Unassigned tickets:', unassignedData);
 
-      // Transform unassigned tickets (no need to fetch user emails since they're unassigned)
-      const unassignedTickets = (allTickets || []).map(ticket => ({
+      // Transform unassigned tickets
+      const unassignedTickets = (unassignedData || []).map(ticket => ({
         ...ticket,
         customer_email: ticket.customer_email,
+        assigned_to: null,
         assigned_to_email: null, // Unassigned tickets have no assigned email
         category_name: ticket.support_ticket_categories?.name
       }));
@@ -154,12 +159,12 @@ const EmployeeCustomers: React.FC = () => {
       // Combine assigned and unassigned tickets
       const combinedTickets = [...assignedTickets, ...unassignedTickets];
 
-      // Remove duplicates
+      // Remove duplicates (in case there are any)
       const uniqueTickets = combinedTickets.filter((ticket, index, self) =>
         index === self.findIndex(t => t.id === ticket.id)
       );
 
-      console.log('✅ Combined tickets:', uniqueTickets);
+      console.log('✅ Final tickets for employee:', uniqueTickets);
       setSupportTickets(uniqueTickets);
     } catch (err) {
       console.error('❌ Error fetching support tickets:', err);
@@ -384,11 +389,14 @@ const EmployeeCustomers: React.FC = () => {
             <div className="text-center py-8 text-gray-500">
               <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>No active support tickets</p>
-              <p className="text-sm">All tickets have been resolved</p>
+              <p className="text-sm">All tickets have been resolved or no tickets available for pickup</p>
             </div>
           ) : (
             <div className="space-y-3 sm:space-y-4">
-              {supportTickets.filter(t => t.status !== 'resolved' && t.status !== 'closed').map((ticket) => (
+              {supportTickets
+                .filter(t => t.status !== 'resolved' && t.status !== 'closed')
+                .filter(t => !t.assigned_to || t.assigned_to === currentUserId) // Only show tickets assigned to current user or unassigned
+                .map((ticket) => (
                 <div key={ticket.id} className="border rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow">
                   <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                     <div className="flex-1 min-w-0">
