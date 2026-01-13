@@ -18,18 +18,35 @@ export const adminService = {
 
 export const userService = {
   async getUserRole(userId: string): Promise<string | null> {
-    const { data, error } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .maybeSingle(); // safer than single()
+    // CRITICAL: Do NOT query user_roles table directly from frontend
+    // This triggers RLS policy evaluation that causes infinite recursion
+    // Instead, use the SECURITY DEFINER function that bypasses RLS
+    
+    // If querying for current user, use the cached function
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && user.id === userId) {
+      const { data, error } = await supabase.rpc('current_user_role');
+      
+      if (error) {
+        console.error("Error fetching user role:", error);
+        return null;
+      }
+      
+      return data;
+    }
+    
+    // For other users (admin checking employee roles, etc.)
+    // Use the parameterized function
+    const { data, error } = await supabase.rpc('get_user_role', {
+      check_user_id: userId
+    });
 
     if (error) {
       console.error("Error fetching user role:", error);
       return null;
     }
 
-    return data?.role || null;
+    return data;
   },
 };
 
@@ -923,15 +940,14 @@ export const supportTicketService = {
     let assignedEmail = null;
     if (data.assigned_to) {
       try {
-        const { data: userInfo, error: userError } = await supabase
-          .from('user_roles')
-          .select('email')
-          .eq('user_id', data.assigned_to)
-          .single();
+        const { data: email, error: emailError } = await supabase
+          .rpc('get_user_email_by_id', {
+            target_user_id: data.assigned_to
+          });
 
-        assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+        assignedEmail = (!emailError && email) ? email : null;
       } catch (err) {
-        console.warn('⚠️ API: Could not fetch assigned user email from user_roles:', err);
+        console.warn('⚠️ API: Could not fetch assigned user email:', err);
       }
     }
 
@@ -962,15 +978,14 @@ export const supportTicketService = {
     let assignedEmail = null;
     if (data.assigned_to) {
       try {
-        const { data: userInfo, error: userError } = await supabase
-          .from('user_roles')
-          .select('email')
-          .eq('user_id', data.assigned_to)
-          .single();
+        const { data: email, error: emailError } = await supabase
+          .rpc('get_user_email_by_id', {
+            target_user_id: data.assigned_to
+          });
 
-        assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+        assignedEmail = (!emailError && email) ? email : null;
       } catch (err) {
-        console.warn('⚠️ API: Could not fetch assigned user email from user_roles:', err);
+        console.warn('⚠️ API: Could not fetch assigned user email:', err);
       }
     }
 
@@ -1003,21 +1018,18 @@ export const supportTicketService = {
     if (error) throw error;
     if (!data) throw new Error('Failed to assign ticket');
 
-    // Get the assigned user's email and name
+    // Get the assigned user's email using RPC
     let assignedEmail = null;
     if (data.assigned_to) {
       try {
-        const { data: userInfo, error: userError } = await supabase
-          .from('user_details')
-          .select('email, name')
-          .eq('user_id', data.assigned_to)
-          .single();
+        const { data: email } = await supabase
+          .rpc('get_user_email_by_id', {
+            target_user_id: data.assigned_to
+          });
 
-        if (!userError && userInfo) {
-          assignedEmail = userInfo.email;
-        }
+        assignedEmail = email || null;
       } catch (err) {
-        console.warn('⚠️ API: Could not fetch assigned user info from user_details:', err);
+        console.warn('⚠️ API: Could not fetch assigned user email:', err);
       }
     }
 
@@ -1190,11 +1202,12 @@ export const supportTicketService = {
     let responderName: string | null = null;
     if (responseData.responder_id) {
       const { data: userInfo, error: userError } = await supabase
-        .from('user_roles')
-        .select('name')
-        .eq('user_id', responseData.responder_id)
-        .single();
-      if (!userError && userInfo) responderName = userInfo.name || null;
+        .rpc('get_user_info', {
+          target_user_id: responseData.responder_id
+        });
+      if (!userError && userInfo && userInfo.length > 0) {
+        responderName = userInfo[0].name || null;
+      }
     } else {
       // Anonymous response - pull customer name from ticket if available
       const { data: ticketInfo, error: ticketErr } = await supabase
@@ -1235,17 +1248,19 @@ export const supportTicketService = {
     let responderEmail = null;
 
     if (data.responder_id) {
-      // Try to fetch email/name from user_roles as a best-effort
+      // Try to fetch email/name from user info as a best-effort
       try {
-        const { data: userInfo, error: userError } = await supabase
-          .from('user_roles')
-          .select('name, email')
-          .eq('user_id', data.responder_id)
-          .single();
-        if (!userError && userInfo) {
-          responderEmail = userInfo.email || null;
-          // Only overwrite responderName if it wasn't set earlier or is null
-          if (!responderName) responderName = userInfo.name || 'Unknown';
+        const { data: email } = await supabase
+          .rpc('get_user_email_by_id', { target_user_id: data.responder_id });
+        responderEmail = email || null;
+        
+        // Get name if not already set
+        if (!responderName) {
+          const { data: userInfo } = await supabase
+            .rpc('get_user_info', { target_user_id: data.responder_id });
+          if (userInfo && userInfo.length > 0) {
+            responderName = userInfo[0].name || 'Unknown';
+          }
         }
       } catch (err) {
         // ignore - best effort
@@ -1281,15 +1296,14 @@ export const supportTicketService = {
     let assignedEmail = null;
     if (ticket.assigned_to) {
       try {
-        const { data: userInfo, error: userError } = await supabase
-          .from('user_roles')
-          .select('email')
-          .eq('user_id', ticket.assigned_to)
-          .single();
+        const { data: email, error: emailError } = await supabase
+          .rpc('get_user_email_by_id', {
+            target_user_id: ticket.assigned_to
+          });
 
-        assignedEmail = (!userError && userInfo) ? userInfo.email : null;
+        assignedEmail = (!emailError && email) ? email : null;
       } catch (err) {
-        console.warn('⚠️ API: Could not fetch assigned user email from user_roles:', err);
+        console.warn('⚠️ API: Could not fetch assigned user email:', err);
       }
     }
 
@@ -1402,14 +1416,10 @@ export const customerService = {
     console.log('🎫 API: Found', data?.length || 0, 'support tickets');
 
     // Get all user roles to assign proper roles
-    const { data: rolesData, error: rolesError } = await supabase
-      .from('user_roles')
-      .select('user_id, role, created_at');
-
-    if (rolesError) {
-      console.warn('⚠️ API: Could not fetch user roles:', rolesError);
-    }
-    console.log('🎫 API: Found', rolesData?.length || 0, 'user roles');
+    // Note: This admin function may require service_role permissions
+    // For now, we'll fetch roles individually for each user as needed
+    const rolesData: any[] = [];
+    console.log('🎫 API: User roles will be fetched individually per user');
 
     // Create a map of user_id to role
     const roleMap = new Map();
@@ -1461,13 +1471,12 @@ export const customerService = {
     // Get customers from support tickets
     const customers = await this.getAllFromTickets();
 
-    // Get all user roles with email from auth.users (we need to fetch both tables)
-    const { data: userDetails, error: detailsError } = await supabase
-      .from('user_details')
-      .select('user_id, role, name, email, user_created_at, role_assigned_at, last_sign_in_at');
+    // Get all members (admins/employees) using RPC instead of view
+    const { data: members, error: membersError } = await supabase
+      .rpc('get_all_members');
 
-    if (detailsError) {
-      console.warn('⚠️ API: Could not fetch user details:', detailsError);
+    if (membersError) {
+      console.warn('⚠️ API: Could not fetch members:', membersError);
       return customers; // Return just customers if query fails
     }
 
@@ -1477,23 +1486,20 @@ export const customerService = {
       userMap.set(customer.user_id, customer);
     });
 
-    // Add employees and admins from user_details (even if they don't have tickets)
-    (userDetails || []).forEach(userDetail => {
-      // Skip customers since they're already added
-      if (userDetail.role === 'customer') return;
-
-      const userId = userDetail.user_id;
+    // Add employees and admins from get_all_members RPC
+    (members || []).forEach(member => {
+      const userId = member.user_id;
       if (!userMap.has(userId)) {
         // This is a new user (employee/admin) not found in tickets
         userMap.set(userId, {
           user_id: userId,
-          email: userDetail.email,
-          user_created_at: userDetail.user_created_at,
-          customer_name: userDetail.name || null, // Use name from user_roles
-          last_sign_in_at: userDetail.last_sign_in_at,
-          email_confirmed_at: null,
-          role: userDetail.role,
-          role_assigned_at: userDetail.role_assigned_at,
+          email: member.email,
+          user_created_at: member.user_created_at,
+          customer_name: member.name || null,
+          last_sign_in_at: member.last_sign_in_at,
+          email_confirmed_at: member.email_confirmed_at,
+          role: member.role,
+          role_assigned_at: member.role_assigned_at,
           is_placeholder: false
         });
       }
@@ -1517,11 +1523,9 @@ export const customerService = {
       if (userError) throw userError;
 
       // Get role
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+      const { data: roleInfo } = await supabase
+        .rpc('get_user_info', { target_user_id: userId });
+      const roleData = (roleInfo && roleInfo.length > 0) ? roleInfo[0] : null;
 
       return {
         user_id: user.user.id,
@@ -1545,16 +1549,9 @@ export const customerService = {
 
     try {
       // Delete from auth.users (admin only)
+      // CASCADE will automatically delete from user_roles
       const { error: authError } = await supabase.auth.admin.deleteUser(userId);
       if (authError) throw authError;
-
-      // Delete user role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId);
-
-      if (roleError) console.error('Error deleting user role:', roleError);
 
       // Delete all tickets for this customer
       const { error: ticketError } = await supabase
@@ -1576,11 +1573,9 @@ export const customerService = {
     console.log('🔄 API: Updating customer role:', userId, role);
 
     const { error } = await supabase
-      .from('user_roles')
-      .upsert({
-        user_id: userId,
-        role: role,
-        assigned_at: new Date().toISOString()
+      .rpc('admin_update_user_role', {
+        target_user_id: userId,
+        new_role: role
       });
 
     if (error) throw error;

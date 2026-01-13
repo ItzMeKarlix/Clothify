@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Package, TrendingUp, AlertTriangle, AlertCircle } from 'lucide-react';
+import { Package, TrendingUp, AlertTriangle, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { inventoryService, lowStockAlertService } from '../../api/api';
 import type { ProductInventory, LowStockAlert } from '../../types/database';
 import toast from 'react-hot-toast';
@@ -14,6 +15,8 @@ const Inventory: React.FC = () => {
   const [outOfStockCount, setOutOfStockCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetchInventoryData();
@@ -29,17 +32,16 @@ const Inventory: React.FC = () => {
       setInventoryItems(items);
       setTotalProducts(items.length);
 
-      // Count low stock items
-      const lowStockItems = items.filter(item => item.stock_quantity <= item.low_stock_threshold && item.stock_quantity > 0);
-      setLowStockCount(lowStockItems.length);
+      // Fetch low stock alerts first
+      const alerts = await lowStockAlertService.getUnresolved();
+      setLowStockAlerts(alerts);
+
+      // Count low stock items - should match unresolved alerts
+      setLowStockCount(alerts.length);
 
       // Count out of stock items
       const outOfStock = items.filter(item => item.stock_quantity === 0);
       setOutOfStockCount(outOfStock.length);
-
-      // Fetch low stock alerts
-      const alerts = await lowStockAlertService.getUnresolved();
-      setLowStockAlerts(alerts);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch inventory data';
       setError(errorMessage);
@@ -190,47 +192,78 @@ const Inventory: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  inventoryItems.slice(0, 10).map((item) => (
-                    <tr key={item.id} className="border-b hover:bg-muted/50">
-                      <td className="p-3">
-                        <span className="font-mono text-sm">{item.product_id.slice(-6)}</span>
-                      </td>
-                      <td className="p-3">
-                        <span className="text-sm">{item.sku || '-'}</span>
-                      </td>
-                      <td className="p-3">
-                        <span className="text-sm">{item.size || '-'}</span>
-                      </td>
-                      <td className="p-3">
-                        <span className="text-sm">{item.color || '-'}</span>
-                      </td>
-                      <td className="p-3">
-                        <span className="font-medium">{item.stock_quantity}</span>
-                      </td>
-                      <td className="p-3">
-                        <span className="text-sm text-gray-600">{item.reserved_quantity}</span>
-                      </td>
-                      <td className="p-3">
-                        <span className="text-sm">{item.location || 'Warehouse A'}</span>
-                      </td>
-                      <td className="p-3">
-                        {item.stock_quantity === 0 ? (
-                          <Badge variant="destructive">Out of Stock</Badge>
-                        ) : item.stock_quantity <= item.low_stock_threshold ? (
-                          <Badge variant="secondary" className="bg-orange-100 text-orange-800">Low Stock</Badge>
-                        ) : (
-                          <Badge variant="secondary" className="bg-green-100 text-green-800">In Stock</Badge>
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                  inventoryItems
+                    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                    .map((item) => (
+                      <tr key={item.id} className="border-b hover:bg-muted/50">
+                        <td className="p-3">
+                          <span className="font-mono text-sm">{item.product_id.slice(-6)}</span>
+                        </td>
+                        <td className="p-3">
+                          <span className="text-sm">{item.sku || '-'}</span>
+                        </td>
+                        <td className="p-3">
+                          <span className="text-sm">{item.size || '-'}</span>
+                        </td>
+                        <td className="p-3">
+                          <span className="text-sm">{item.color || '-'}</span>
+                        </td>
+                        <td className="p-3">
+                          <span className="font-medium">{item.stock_quantity}</span>
+                        </td>
+                        <td className="p-3">
+                          <span className="text-sm text-gray-600">{item.reserved_quantity}</span>
+                        </td>
+                        <td className="p-3">
+                          <span className="text-sm">{item.location || 'Warehouse A'}</span>
+                        </td>
+                        <td className="p-3">
+                          {item.stock_quantity === 0 ? (
+                            <Badge variant="destructive">Out of Stock</Badge>
+                          ) : item.stock_quantity <= item.low_stock_threshold ? (
+                            <Badge variant="secondary" className="bg-orange-100 text-orange-800">Low Stock</Badge>
+                          ) : (
+                            <Badge variant="secondary" className="bg-green-100 text-green-800">In Stock</Badge>
+                          )}
+                        </td>
+                      </tr>
+                    ))
                 )}
               </tbody>
             </table>
           </div>
-          {inventoryItems.length > 10 && (
-            <div className="mt-4 text-center text-sm text-gray-600">
-              Showing 10 of {inventoryItems.length} items
+          {inventoryItems.length > itemsPerPage && (
+            <div className="mt-6 flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, inventoryItems.length)} of {inventoryItems.length} items
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </Button>
+                <div className="flex items-center gap-2 px-3 py-1 border rounded bg-gray-50">
+                  <span className="text-sm font-medium">{currentPage}</span>
+                  <span className="text-sm text-gray-500">/</span>
+                  <span className="text-sm text-gray-500">{Math.ceil(inventoryItems.length / itemsPerPage)}</span>
+                </div>
+                <Button
+                  onClick={() => setCurrentPage(prev => Math.min(Math.ceil(inventoryItems.length / itemsPerPage), prev + 1))}
+                  disabled={currentPage === Math.ceil(inventoryItems.length / itemsPerPage)}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

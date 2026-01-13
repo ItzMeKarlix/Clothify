@@ -19,11 +19,8 @@ export const useOnboarding = () => {
         setUserEmail(session.data.session.user.email || null);
 
         // Check if user has completed onboarding
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('onboarding_completed')
-          .eq('user_id', userId)
-          .single();
+        // CRITICAL: Use RPC function instead of direct table query to avoid RLS recursion
+        const { data, error } = await supabase.rpc('get_onboarding_status');
 
         if (error) {
           console.error('Error checking onboarding status:', error);
@@ -32,7 +29,7 @@ export const useOnboarding = () => {
         }
 
         // If onboarding_completed is false/null, user needs to complete onboarding
-        const shouldNeedOnboarding = !data?.onboarding_completed;
+        const shouldNeedOnboarding = !data;
         setNeedsOnboarding(shouldNeedOnboarding);
         
         // Store in localStorage to check for changes
@@ -66,10 +63,13 @@ export const useOnboarding = () => {
       const session = await supabase.auth.getSession();
       if (!session.data.session?.user?.id) return;
 
-      await supabase
-        .from('user_roles')
-        .update({ onboarding_completed: true })
-        .eq('user_id', session.data.session.user.id);
+      // CRITICAL: Use RPC function instead of direct table update to avoid RLS recursion
+      const { error } = await supabase.rpc('complete_onboarding');
+
+      if (error) {
+        console.error('Error completing onboarding:', error);
+        return;
+      }
 
       setNeedsOnboarding(false);
       localStorage.removeItem('pendingOnboarding');

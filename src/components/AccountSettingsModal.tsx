@@ -93,27 +93,23 @@ const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({ isOpen, onC
           if (user) {
             setUser(user);
 
-            // Get user role and name from user_roles table
-            const { data: userRoleData, error: roleError } = await supabase
-              .from('user_roles')
-              .select('name')
-              .eq('user_id', user.id)
-              .single();
+            // Get user profile data using RPC to avoid RLS recursion
+            const { data: userProfile, error: roleError } = await supabase
+              .rpc('get_user_profile');
 
             if (roleError) {
-              console.error('❌ Error fetching user role/name:', roleError);
-              // If the name column doesn't exist, it will fail here
-              toast.error('Database setup incomplete. Please add the name column to user_roles table.', { id: 'account-db-incomplete' });
+              console.error('❌ Error fetching user profile:', roleError);
+              toast.error('Error loading profile data.', { id: 'account-db-error' });
             }
 
             setFormData(prev => ({
               ...prev,
               email: user.email || '',
-              name: userRoleData?.name || '',
+              name: userProfile?.name || '',
             }));
 
             // Store the original name for change detection
-            setOriginalName(userRoleData?.name || '');
+            setOriginalName(userProfile?.name || '');
           }
         } catch (error) {
           console.error('Error fetching user:', error);
@@ -168,33 +164,19 @@ const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({ isOpen, onC
     console.log('📝 Starting name update...');
 
     try {
-      console.log('🔍 Checking user_roles table...');
-      // First check if the user exists in user_roles
-      const { data: existingUser, error: checkError } = await supabase
-        .from('user_roles')
-        .select('user_id, name')
-        .eq('user_id', user.id)
-        .single();
-
-      if (checkError) {
-        console.error('❌ Error checking user in user_roles:', checkError);
-        throw new Error(`User not found in roles table: ${checkError.message}`);
-      }
-
-      console.log('✅ User found in user_roles:', existingUser);
-
-      const { data, error } = await supabase
-        .from('user_roles')
-        .update({ name: formData.name.trim() })
-        .eq('user_id', user.id)
-        .select();
+      console.log('🔍 Updating user name via RPC...');
+      
+      // Use RPC function to avoid RLS recursion
+      const { error } = await supabase.rpc('update_user_name', {
+        new_name: formData.name.trim()
+      });
 
       if (error) {
         console.error('❌ Update error:', error);
         throw error;
       }
 
-      console.log('✅ Update successful, returned data:', data);
+      console.log('✅ Name update successful');
       toast.success('Name updated successfully', { id: 'account-name-updated' });
 
       // Update the original name so the button becomes disabled again

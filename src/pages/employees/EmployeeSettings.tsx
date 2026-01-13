@@ -89,11 +89,8 @@ const EmployeeSettings: React.FC = () => {
         }
 
         // Fetch user role and name from user_roles table
-        const { data: userRoleData, error: roleError } = await supabase
-          .from('user_roles')
-          .select('name, role')
-          .eq('user_id', user.id)
-          .single();
+        const { data: userProfile, error: roleError } = await supabase
+          .rpc('get_user_profile');
 
         if (roleError) {
           console.error('Error fetching user role:', roleError);
@@ -102,9 +99,9 @@ const EmployeeSettings: React.FC = () => {
         }
 
         setEmployeeData({
-          name: userRoleData?.name || '',
+          name: userProfile?.[0]?.name || '',
           email: user.email || '',
-          role: userRoleData?.role || 'employee'
+          role: userProfile?.[0]?.role || 'employee'
         });
       } catch (err) {
         console.error('Error fetching employee data:', err);

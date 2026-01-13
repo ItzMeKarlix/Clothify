@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import toast from 'react-hot-toast';
 import { authService, supabase } from '@/api/api';
-import { useNavigate } from 'react-router-dom';
 
 // Password strength checker
 const getPasswordStrength = (password: string) => {
@@ -58,8 +57,6 @@ interface OnboardingModalProps {
 }
 
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, userEmail }) => {
-  const navigate = useNavigate();
-  
   const [showSetup, setShowSetup] = useState(false);
   const [username, setUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -107,36 +104,18 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, userEm
         return;
       }
 
-      const userId = session.data.session.user.id;
-
       // Save username to user_roles table
       try {
-        // First check if user exists in user_roles
-        const { data: existingRole, error: checkError } = await supabase
-          .from('user_roles')
-          .select('*')
-          .eq('user_id', userId)
-          .single();
+        const { error: usernameError } = await supabase
+          .rpc('update_user_name', {
+            new_name: username.trim()
+          });
 
-        if (checkError && checkError.code !== 'PGRST116') {
-          console.error('Error checking user_roles:', checkError);
-        }
-
-        if (existingRole) {
-          // Update existing user_roles record
-          await supabase
-            .from('user_roles')
-            .update({ name: username.trim() })
-            .eq('user_id', userId);
-        } else {
-          // Create new user_roles record with default role
-          await supabase
-            .from('user_roles')
-            .insert({
-              user_id: userId,
-              name: username.trim(),
-              role: 'customer'
-            });
+        if (usernameError) {
+          console.error('Error updating username:', usernameError);
+          toast.error('Failed to save username');
+          setLoading(false);
+          return;
         }
       } catch (usernameErr) {
         console.error('Error updating username:', usernameErr);
@@ -157,10 +136,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, userEm
 
       // Mark onboarding as complete
       try {
-        await supabase
-          .from('user_roles')
-          .update({ onboarding_completed: true })
-          .eq('user_id', userId);
+        const { error: onboardingError } = await supabase
+          .rpc('complete_onboarding');
+        
+        if (onboardingError) {
+          console.error('Error marking onboarding complete:', onboardingError);
+        }
       } catch (onboardingErr) {
         console.error('Error marking onboarding complete:', onboardingErr);
         // Continue even if this fails

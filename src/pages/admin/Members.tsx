@@ -115,10 +115,10 @@ const Members: React.FC = () => {
   const fetchMembers = async () => {
     try {
       setLoading(true);
+      
+      // Use RPC function instead of querying view to avoid RLS recursion
       const { data, error } = await supabase
-        .from('user_details')
-        .select('*')
-        .order('role_assigned_at', { ascending: false });
+        .rpc('get_all_members');
 
       if (error) throw error;
       setMembers(data || []);
@@ -143,19 +143,22 @@ const Members: React.FC = () => {
       // Get unique employee IDs
       const employeeIds = [...new Set((data || []).map(report => report.employee_id))];
 
-      // Fetch user emails from user_details view
-      const { data: userDetails, error: userError } = await supabase
-        .from('user_details')
-        .select('user_id, email')
-        .in('user_id', employeeIds);
+      // Fetch user emails using RPC instead of querying view
+      const emailPromises = employeeIds.map(async (empId) => {
+        const { data: email } = await supabase
+          .rpc('get_user_email_by_id', { target_user_id: empId });
+        return { user_id: empId, email };
+      });
+
+      const emailResults = await Promise.all(emailPromises);
 
       // Create a map of user_id to email
       const userEmailMap: { [key: string]: string } = {};
-      if (!userError && userDetails) {
-        userDetails.forEach(user => {
-          userEmailMap[user.user_id] = user.email;
-        });
-      }
+      emailResults.forEach(result => {
+        if (result.email) {
+          userEmailMap[result.user_id] = result.email;
+        }
+      });
 
       // Transform the data to include employee email
       const transformedReports = (data || []).map(report => ({
@@ -315,10 +318,9 @@ const Members: React.FC = () => {
 
       // Password verified, now update the user's role
       const { error: roleError } = await supabase
-        .from('user_roles')
-        .upsert({
-          user_id: selectedUser.user_id,
-          role: assignRole
+        .rpc('admin_update_user_role', {
+          target_user_id: selectedUser.user_id,
+          new_role: assignRole
         });
 
       if (roleError) {
@@ -812,7 +814,7 @@ const Members: React.FC = () => {
               </div>
             ) : (
               // Step 2: Security Verification
-              <div className="space-y-4">
+              <form onSubmit={(e) => { e.preventDefault(); verifyPasswordAndInvite(); }} className="space-y-4">
                 <div className="bg-blue-50 p-3 rounded-lg">
                   <p className="text-sm text-blue-800 mb-2">
                     <strong>Inviting:</strong> {inviteEmail}
@@ -841,6 +843,7 @@ const Members: React.FC = () => {
                       className="w-full p-2 pr-10 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Enter your admin password"
                       autoFocus
+                      autoComplete="current-password"
                     />
                     <button
                       type="button"
@@ -864,8 +867,10 @@ const Members: React.FC = () => {
                       className="flex-1 p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Enter 6-digit code"
                       maxLength={6}
+                      autoComplete="one-time-code"
                     />
                     <button
+                      type="button"
                       onClick={sendOTP}
                       disabled={otpTimer > 0}
                       className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400 whitespace-nowrap"
@@ -888,7 +893,7 @@ const Members: React.FC = () => {
                     Once verified, an invitation email will be automatically sent to <strong>{inviteEmail}</strong> with signup instructions.
                   </p>
                 </div>
-              </div>
+              </form>
             )}
 
             <div className="flex gap-3 mt-6">
@@ -954,7 +959,7 @@ const Members: React.FC = () => {
               </button>
             </div>
 
-            <div className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); assignRoleToMember(); }} className="space-y-4">
               <div className="bg-blue-50 p-3 rounded-lg">
                 <p className="text-sm text-blue-800 mb-2">
                   <strong>User:</strong> {selectedUser.email}
@@ -1015,6 +1020,7 @@ const Members: React.FC = () => {
                     className="w-full p-2 pr-10 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Enter your admin password"
                     autoFocus
+                    autoComplete="current-password"
                   />
                   <button
                     type="button"
@@ -1038,8 +1044,10 @@ const Members: React.FC = () => {
                     className="flex-1 p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Enter 6-digit code"
                     maxLength={6}
+                    autoComplete="one-time-code"
                   />
                   <button
+                    type="button"
                     onClick={sendAssignOTP}
                     disabled={assignOtpTimer > 0}
                     className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400 whitespace-nowrap"
@@ -1053,30 +1061,31 @@ const Members: React.FC = () => {
                   </p>
                 )}
               </div>
-            </div>
 
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowAssignRoleModal(false);
-                  setSelectedUser(null);
-                  setAssignRole('employee');
-                  setAssignPassword('');
-                  setAssignOtp('');
-                  setAssignOtpSent(false);
-                }}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={assignRoleToMember}
-                disabled={assigning || !assignPassword || !assignOtp}
-                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400"
-              >
-                {assigning ? 'Assigning...' : 'Assign Role'}
-              </button>
-            </div>
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAssignRoleModal(false);
+                    setSelectedUser(null);
+                    setAssignRole('employee');
+                    setAssignPassword('');
+                    setAssignOtp('');
+                    setAssignOtpSent(false);
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={assigning || !assignPassword || !assignOtp}
+                  className="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400"
+                >
+                  {assigning ? 'Assigning...' : 'Assign Role'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
