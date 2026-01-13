@@ -625,8 +625,8 @@ const Members: React.FC = () => {
             {/* Filter reports based on view mode */}
             {(() => {
               const filteredReports = showReportHistory
-                ? reports.filter(r => r.status === 'closed')
-                : reports.filter(r => r.status !== 'closed');
+                ? reports.filter(r => r.status === 'resolved' || r.status === 'closed')
+                : reports.filter(r => r.status !== 'resolved' && r.status !== 'closed');
 
               if (filteredReports.length === 0) {
                 return (
