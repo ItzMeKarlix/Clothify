@@ -1,6 +1,7 @@
 import React, { useContext, useState, useRef, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { CartContext } from "../context/CartContext";
+import { sanitizeString } from "../utils/validation";
 import { Search20Regular, ShoppingBag20Regular, BoxRegular } from "@fluentui/react-icons";
 import logo from "../assets/logo.svg";
 
@@ -56,7 +57,8 @@ const Header: React.FC<HeaderProps> = ({ isVisible }) => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+      const sanitizedQuery = sanitizeString(searchQuery.trim());
+      navigate(`/products?search=${encodeURIComponent(sanitizedQuery)}`);
       setSearchQuery("");
       setIsSearchOverlayOpen(false);
     }
