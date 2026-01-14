@@ -45,11 +45,17 @@ import EmployeeOrders from "./pages/employees/EmployeeOrders";
 import EmployeeSettings from "./pages/employees/EmployeeSettings";
 import EmployeeSupport from "./pages/employees/EmployeeSupport";
 import EmployeeInformation from "./pages/employees/EmployeeInformation";
+import { useSessionTimeout } from "./hooks/useSessionTimeout";
 
+const SessionHandler = () => {
+  useSessionTimeout();
+  return null;
+};
 
 const App: React.FC = () => {
   return (
     <Router>
+        <SessionHandler />
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Layout><Home /></Layout>} />

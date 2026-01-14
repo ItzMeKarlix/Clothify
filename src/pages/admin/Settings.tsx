@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Settings as SettingsIcon, Store, Bell, Shield, Save, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { useOnboarding } from '../../hooks/use-onboarding';
 import OnboardingModal from '../../components/OnboardingModal';
 import { logger } from "@/utils/logger";
+import { getSessionTimeoutEnabled, setSessionTimeoutEnabled } from "@/hooks/useSessionTimeout";
 
 // Password strength checker
 const getPasswordStrength = (password: string) => {
@@ -68,6 +69,18 @@ const Settings: React.FC = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [sessionTimeoutEnabled, setSessionTimeoutEnabledState] = useState(true);
+
+  useEffect(() => {
+    // Load settings
+    setSessionTimeoutEnabledState(getSessionTimeoutEnabled());
+  }, []);
+
+  const handleSessionTimeoutChange = (checked: boolean) => {
+    setSessionTimeoutEnabledState(checked);
+    setSessionTimeoutEnabled(checked);
+    toast.success(`Session timeout ${checked ? 'enabled' : 'disabled'}`);
+  };
 
   const passwordStrength = useMemo(() => getPasswordStrength(newPassword), [newPassword]);
   const isPasswordValid = passwordStrength.strength >= 3; // At least "Fair" strength
@@ -251,7 +264,10 @@ const Settings: React.FC = () => {
                 <Label className="text-sm font-medium">Session Timeout</Label>
                 <p className="text-xs text-muted-foreground">Auto-logout after inactivity</p>
               </div>
-              <Switch defaultChecked />
+              <Switch 
+                checked={sessionTimeoutEnabled}
+                onCheckedChange={handleSessionTimeoutChange}
+              />
             </div>
 
             <Separator />
