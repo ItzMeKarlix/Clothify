@@ -4,6 +4,10 @@ import { Toaster } from 'react-hot-toast';
 import './index.css';
 import { CartProvider } from "./context/CartContext.tsx";
 import App from './App';
+import { showConsoleWarning } from './utils/consoleWarning';
+
+// Initialize security warning
+showConsoleWarning();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

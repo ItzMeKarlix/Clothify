@@ -575,7 +575,7 @@ const Customers: React.FC = () => {
                           
                           // If employee doesn't exist, unassign the ticket
                           if (!assignedEmployee && ticket.assigned_to) {
-                            supportTicketService.assignTicket(ticket.id, '').catch(err => {
+                            supportTicketService.assignTicket(ticket.id, null).catch(err => {
                               logger.error('Error unassigning ticket:', err);
                             });
                           }

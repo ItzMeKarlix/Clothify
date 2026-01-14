@@ -691,7 +691,7 @@ export const authService = {
 export const supportTicketService = {
   // Get all support tickets (admin view)
   async getAll(): Promise<SupportTicket[]> {
-    console.log('📨 API: Fetching all support tickets...');
+    logger.debug('📨 API: Fetching all support tickets...');
 
     // First get all tickets
     const { data: tickets, error: ticketsError } = await supabase
@@ -708,7 +708,7 @@ export const supportTicketService = {
     }
 
     if (!tickets || tickets.length === 0) {
-      console.log('✅ API: No tickets found');
+      logger.debug('✅ API: No tickets found');
       return [];
     }
 
@@ -720,7 +720,7 @@ export const supportTicketService = {
     
     // DISABLED: Querying user_roles causes 400 errors due to RLS/permissions
     // For now, just use a default email or rely on client-side display
-    console.log('⚠️ Skipping user email queries in getTicketsForUser - RLS/permissions issue');
+    logger.warn('⚠️ Skipping user email queries in getTicketsForUser - RLS/permissions issue');
     
     /*
     if (assignedUserIds.length > 0) {
@@ -728,8 +728,8 @@ export const supportTicketService = {
     }
     */
 
-    console.log('✅ API: Raw tickets from DB:', tickets);
-    console.log('✅ API: User emails:', userEmails);
+    logger.debug('✅ API: Raw tickets from DB:', tickets);
+    logger.debug('✅ API: User emails:', userEmails);
 
     // Transform the data to match our interface
     const transformedTickets = tickets.map(ticket => ({
@@ -739,7 +739,7 @@ export const supportTicketService = {
       category_name: ticket.support_ticket_categories?.name
     }));
 
-    console.log('✅ API: Transformed tickets:', transformedTickets);
+    logger.debug('✅ API: Transformed tickets:', transformedTickets);
     return transformedTickets;
   },
 
@@ -962,17 +962,24 @@ export const supportTicketService = {
 
   // Update a support ticket
   async update(id: number, updates: SupportTicketUpdate): Promise<SupportTicket> {
-    const { data, error } = await supabase
+    const { error: updateError } = await supabase
       .from('support_tickets')
       .update(updates)
-      .eq('id', id)
+      .eq('id', id);
+
+    if (updateError) throw updateError;
+    
+    // Fetch updated ticket
+    const { data, error: fetchError } = await supabase
+      .from('support_tickets')
       .select(`
         *,
         support_ticket_categories(name)
       `)
+      .eq('id', id)
       .single();
 
-    if (error) throw error;
+    if (fetchError) throw fetchError;
     if (!data) throw new Error('Failed to update support ticket');
 
     // Get the assigned user's email if assigned_to exists
@@ -999,24 +1006,36 @@ export const supportTicketService = {
   },
 
   // Assign ticket to user
-  async assignTicket(ticketId: number, assignedTo: string): Promise<SupportTicket> {
-    console.log('👤 API: Assigning ticket', ticketId, 'to user', assignedTo);
+  async assignTicket(ticketId: number, assignedTo: string | null): Promise<SupportTicket> {
+    logger.debug('👤 API: Assigning ticket', ticketId, 'to user', assignedTo);
 
-    const { data, error } = await supabase
+    // Convert empty string to null for UUID field
+    const assigneeId = assignedTo === '' ? null : assignedTo;
+
+    const { error: updateError } = await supabase
       .from('support_tickets')
       .update({
-        assigned_to: assignedTo,
-        status: 'in-progress',
-        updated_at: new Date().toISOString()
+        assigned_to: assigneeId,
+        status: assigneeId ? 'in-progress' : 'open'
       })
-      .eq('id', ticketId)
+      .eq('id', ticketId);
+
+    if (updateError) {
+      console.error('❌ Error assigning ticket:', updateError);
+      throw updateError;
+    }
+    
+    // Fetch updated ticket with join
+    const { data, error: fetchError } = await supabase
+      .from('support_tickets')
       .select(`
         *,
         support_ticket_categories(name)
       `)
+      .eq('id', ticketId)
       .single();
 
-    if (error) throw error;
+    if (fetchError) throw fetchError;
     if (!data) throw new Error('Failed to assign ticket');
 
     // Get the assigned user's email using RPC
@@ -1044,23 +1063,32 @@ export const supportTicketService = {
 
   // Mark ticket as resolved
   async resolveTicket(ticketId: number): Promise<SupportTicket> {
-    console.log('✅ API: Resolving ticket', ticketId);
+    logger.debug('✅ API: Resolving ticket', ticketId);
 
-    const { data, error } = await supabase
+    const { error: updateError } = await supabase
       .from('support_tickets')
       .update({
         status: 'resolved',
-        resolved_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        resolved_at: new Date().toISOString()
       })
-      .eq('id', ticketId)
+      .eq('id', ticketId);
+
+    if (updateError) {
+      console.error('❌ Error resolving ticket:', updateError);
+      throw updateError;
+    }
+    
+    // Fetch the updated ticket with all details in a separate query
+    const { data, error: fetchError } = await supabase
+      .from('support_tickets')
       .select(`
         *,
         support_ticket_categories(name)
       `)
+      .eq('id', ticketId)
       .single();
 
-    if (error) throw error;
+    if (fetchError) throw fetchError;
     if (!data) throw new Error('Failed to resolve ticket');
 
     // Get the assigned user's email if assigned_to exists
@@ -1091,29 +1119,39 @@ export const supportTicketService = {
 
   // Update ticket status
   async updateStatus(ticketId: number, status: string, priority?: string): Promise<SupportTicket> {
-    console.log('🔄 API: Updating ticket', ticketId, 'status to', status);
+    logger.debug('🔄 API: Updating ticket', ticketId, 'status to', status);
 
     const updateData: any = {
-      status: status,
-      updated_at: new Date().toISOString()
+      status: status
     };
 
     if (priority) updateData.priority = priority;
     if (status === 'resolved') updateData.resolved_at = new Date().toISOString();
     if (status === 'closed') updateData.closed_at = new Date().toISOString();
 
-    const { data, error } = await supabase
+    const { error: updateError } = await supabase
       .from('support_tickets')
       .update(updateData)
-      .eq('id', ticketId)
+      .eq('id', ticketId);
+
+    if (updateError) {
+      console.error('❌ Error updating ticket status:', updateError);
+      throw updateError;
+    }
+    
+    // Fetch updated ticket
+    const { data, error: fetchError } = await supabase
+      .from('support_tickets')
       .select(`
         *,
         support_ticket_categories(name)
       `)
+      .eq('id', ticketId)
       .single();
 
-    if (error) throw error;
+    if (fetchError) throw fetchError;
     if (!data) throw new Error('Failed to update ticket status');
+
 
     // Get the assigned user's email if assigned_to exists
     // DISABLED: user_roles queries cause 400 errors due to RLS policies
@@ -1354,7 +1392,7 @@ export const customerService = {
 
   // Get customers for employees (from tickets they can access)
   async getAllForEmployees(): Promise<any[]> {
-    console.log('👥 API: Getting customers for employees (from accessible tickets)...');
+    logger.debug('👥 API: Getting customers for employees (from accessible tickets)...');
 
     try {
       // Get current user
@@ -1395,7 +1433,7 @@ export const customerService = {
       });
 
       const customers = Array.from(customerMap.values());
-      console.log('✅ API: Employee customers from accessible tickets:', customers);
+      logger.debug('✅ API: Employee customers from accessible tickets:', customers);
       return customers;
     } catch (error) {
       console.error('❌ API Error in getAllForEmployees:', error);
@@ -1405,7 +1443,7 @@ export const customerService = {
 
   // Fallback method - get customers from support tickets (for when admin API fails)
   async getAllFromTickets(): Promise<any[]> {
-    console.log('🎫 API: Getting customers from support tickets (fallback)...');
+    logger.debug('🎫 API: Getting customers from support tickets (fallback)...');
 
     // Get unique customers from support tickets
     const { data, error } = await supabase
@@ -1414,13 +1452,13 @@ export const customerService = {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    console.log('🎫 API: Found', data?.length || 0, 'support tickets');
+    logger.debug('🎫 API: Found', data?.length || 0, 'support tickets');
 
     // Get all user roles to assign proper roles
     // Note: This admin function may require service_role permissions
     // For now, we'll fetch roles individually for each user as needed
     const rolesData: any[] = [];
-    console.log('🎫 API: User roles will be fetched individually per user');
+    logger.debug('🎫 API: User roles will be fetched individually per user');
 
     // Create a map of user_id to role
     const roleMap = new Map();
@@ -1430,7 +1468,7 @@ export const customerService = {
         role_assigned_at: roleEntry.created_at
       });
     });
-    console.log('🎫 API: Role map created with', roleMap.size, 'entries');
+    logger.debug('🎫 API: Role map created with', roleMap.size, 'entries');
 
     // Create a map to get unique customers from tickets
     const customerMap = new Map();
@@ -1459,15 +1497,15 @@ export const customerService = {
     });
 
     const result = Array.from(customerMap.values());
-    console.log('🎫 API: Returning', result.length, 'customers');
-    console.log('🎫 API: Customers with roles:', result.map(c => ({ email: c.email, role: c.role })));
+    logger.debug('🎫 API: Returning', result.length, 'customers');
+    logger.debug('🎫 API: Customers with roles:', result.map(c => ({ email: c.email, role: c.role })));
 
     return result;
   },
 
   // Get all users (customers, employees, admins) from user_roles and support tickets
   async getAllUsers(): Promise<any[]> {
-    console.log('👥 API: Getting all users (customers, employees, admins)...');
+    logger.debug('👥 API: Getting all users (customers, employees, admins)...');
 
     // Get customers from support tickets
     const customers = await this.getAllFromTickets();
@@ -1507,15 +1545,15 @@ export const customerService = {
     });
 
     const result = Array.from(userMap.values());
-    console.log('👥 API: Returning', result.length, 'total users');
-    console.log('👥 API: Users with roles:', result.map(u => ({ id: u.user_id, email: u.email, name: u.customer_name, role: u.role })));
+    logger.debug('👥 API: Returning', result.length, 'total users');
+    logger.debug('👥 API: Users with roles:', result.map(u => ({ id: u.user_id, email: u.email, name: u.customer_name, role: u.role })));
 
     return result;
   },
 
   // Get customer by ID
   async getById(userId: string): Promise<any> {
-    console.log('👤 API: Fetching customer by ID:', userId);
+    logger.debug('👤 API: Fetching customer by ID:', userId);
 
     // Try to get from auth.users first
     try {
