@@ -27,6 +27,19 @@ const Login: React.FC = () => {
   const [mfaRequired, setMfaRequired] = useState<boolean>(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [storedCredentials, setStoredCredentials] = useState<{email: string, password: string} | null>(null);
+  const [resendCooldown, setResendCooldown] = useState<number>(0);
+  const [captchaToken, setCaptchaToken] = useState<string>("");
+
+  // Timer for resend button
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   // Check if user is already authenticated and redirect accordingly
   useEffect(() => {
@@ -94,6 +107,7 @@ const Login: React.FC = () => {
       if (!window.turnstile) throw new Error("CAPTCHA not loaded");
       const token = window.turnstile.getResponse();
       if (!token) throw new Error("Please complete the CAPTCHA");
+      setCaptchaToken(token);
 
       // Validate credentials only (don't keep session)
       const session = await authService.login(sanitizedEmail, sanitizedPassword);
@@ -124,6 +138,7 @@ const Login: React.FC = () => {
         
         toast.success("A verification code has been sent to your email.", { id: "otp-sent" });
         setMfaRequired(true); // Show OTP input
+        setResendCooldown(60); // Start cooldown immediately
       } catch (err: any) {
         console.error("OTP send error:", err);
         throw new Error(err.message || "Failed to send verification code");
@@ -136,6 +151,40 @@ const Login: React.FC = () => {
       window.turnstile?.reset();
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle Resend OTP
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0 || !storedCredentials?.email) return;
+    
+    const toastId = toast.loading("Resending code...");
+
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      const res = await fetch(`${supabaseUrl}/functions/v1/send-otp`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${supabaseAnonKey}`
+        },
+        body: JSON.stringify({ 
+           email: storedCredentials.email, 
+           token: captchaToken 
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to resend code");
+      
+      toast.success("Code resent successfully!", { id: toastId });
+      setResendCooldown(60);
+
+    } catch (err: any) {
+      console.error("Resend error:", err);
+      toast.error(err.message || "Failed to resend", { id: toastId });
     }
   };
 
@@ -271,6 +320,23 @@ const Login: React.FC = () => {
               >
                 {loading ? "Verifying..." : "Verify Code"}
               </button>
+
+              <div className="text-center mt-4">
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={resendCooldown > 0 || loading}
+                  className={`text-sm ${
+                    resendCooldown > 0 || loading
+                      ? "text-gray-400 cursor-not-allowed" 
+                      : "text-blue-600 hover:text-blue-800 underline"
+                  }`}
+                >
+                  {resendCooldown > 0 
+                    ? `Resend code in ${resendCooldown}s` 
+                    : "Resend verification code"}
+                </button>
+              </div>
             </form>
           )}
         </div>

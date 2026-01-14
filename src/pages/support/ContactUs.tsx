@@ -263,7 +263,7 @@ const ContactUs: React.FC = () => {
 
       // Generate ticket number: TICK-YYYYMMDD-XXXXX (e.g., TICK-20240114-12345)
       const now = new Date();
-      const dateStr = now.toISOString().split('T')[0].replace(/-/g, '');
+      const dateStr = (now.toISOString().split('T')[0] ?? '').replace(/-/g, '');
       const randomNum = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
       const ticketNumber = `TICK-${dateStr}-${randomNum}`;
 
