@@ -28,7 +28,6 @@ const Login: React.FC = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [storedCredentials, setStoredCredentials] = useState<{email: string, password: string} | null>(null);
   const [resendCooldown, setResendCooldown] = useState<number>(0);
-  const [captchaToken, setCaptchaToken] = useState<string>("");
 
   // Timer for resend button
   useEffect(() => {
@@ -107,7 +106,6 @@ const Login: React.FC = () => {
       if (!window.turnstile) throw new Error("CAPTCHA not loaded");
       const token = window.turnstile.getResponse();
       if (!token) throw new Error("Please complete the CAPTCHA");
-      setCaptchaToken(token);
 
       // Validate credentials only (don't keep session)
       const session = await authService.login(sanitizedEmail, sanitizedPassword);
@@ -171,8 +169,8 @@ const Login: React.FC = () => {
           "Authorization": `Bearer ${supabaseAnonKey}`
         },
         body: JSON.stringify({ 
-           email: storedCredentials.email, 
-           token: captchaToken 
+           email: storedCredentials.email
+           // No token sent for resend - strictly rate limited by cooldown
         }),
       });
 
